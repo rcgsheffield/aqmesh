@@ -1,4 +1,6 @@
-# aqmesh
+[![CI](https://github.com/rcgsheffield/aqmesh/actions/workflows/ci.yml/badge.svg)](https://github.com/rcgsheffield/aqmesh/actions/workflows/ci.yml)
+
+# AQMesh Data Pipeline
 
 Outdoor air quality sensors data pipeline for the [AQMesh](https://www.aqmesh.com) platform.
 
