@@ -54,13 +54,9 @@ Self-hosted Prefect server + worker, managed by systemd. From a checkout on the 
 
 ```bash
 sudo APP_DIR=/opt/aqmesh DATA_ROOT=/mnt/aqmesh-data bash deploy/bootstrap.sh
-sudo nano /opt/aqmesh/.env            # set real AQMesh credentials
-sudo systemctl restart prefect-worker
 ```
 
-`bootstrap.sh` creates an `aqmesh` service user, installs dependencies, starts the Prefect server,
-creates the `aqmesh-pool` work pool, deploys the hourly schedule (`prefect.yaml`), and starts the
-worker. Check status with `systemctl status prefect-server prefect-worker`.
+See **[docs/deployment.md](docs/deployment.md)** for the full deployment and verification guide.
 
 ## Generative AI usage
 
