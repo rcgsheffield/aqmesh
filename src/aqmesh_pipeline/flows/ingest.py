@@ -43,9 +43,7 @@ def ingest_location_param(
             if ds and (last_datestamp is None or ds > last_datestamp):
                 last_datestamp = ds
 
-    logger.info(
-        "Location %s %s: %d new readings.", location_number, param.label, total
-    )
+    logger.info("Location %s %s: %d new readings.", location_number, param.label, total)
     return {
         "location_number": location_number,
         "param": param.label,

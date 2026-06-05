@@ -62,9 +62,7 @@ def write_raw_batch(
     return path
 
 
-def read_raw_readings(
-    settings: Settings, location_number: int, param: Param
-) -> pd.DataFrame:
+def read_raw_readings(settings: Settings, location_number: int, param: Param) -> pd.DataFrame:
     """Load and concatenate every raw reading for a location/param, deduped.
 
     Files are read in filename order (``<pulled_at>_<seq>``), which is

@@ -124,9 +124,7 @@ class AQMeshClient:
         resp = self._get("/Pods/Assets_V1")
         return [Asset.model_validate(item) for item in resp.json()]
 
-    def iter_location_data(
-        self, location_number: int, param: Param
-    ) -> Iterator[list[dict]]:
+    def iter_location_data(self, location_number: int, param: Param) -> Iterator[list[dict]]:
         """Yield successive reading batches for a location until the cursor is exhausted.
 
         Each call to the ``Next`` endpoint advances a server-side pointer, so we loop
@@ -135,8 +133,7 @@ class AQMeshClient:
         s = self._settings
         while True:
             path = (
-                f"/LocationData/Next/{location_number}/{int(param)}"
-                f"/{s.units}/{s.tpc}/{s.version}"
+                f"/LocationData/Next/{location_number}/{int(param)}/{s.units}/{s.tpc}/{s.version}"
             )
             resp = self._get(path)
             if resp.status_code == httpx.codes.NO_CONTENT or not resp.content:

@@ -39,8 +39,12 @@ def test_read_missing_location_is_empty(settings):
 def test_pointers_round_trip(settings):
     pointers: dict = {}
     update_pointer(
-        pointers, 510, Param.GAS,
-        last_reading_number=3256955, last_datestamp="2019-04-19T09:30:00", new_readings=2,
+        pointers,
+        510,
+        Param.GAS,
+        last_reading_number=3256955,
+        last_datestamp="2019-04-19T09:30:00",
+        new_readings=2,
     )
     save_pointers(settings, pointers)
 
