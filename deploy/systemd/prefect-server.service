@@ -1,0 +1,18 @@
+[Unit]
+Description=Prefect server (AQMesh pipeline)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=aqmesh
+Group=aqmesh
+WorkingDirectory=/opt/aqmesh
+Environment=PREFECT_HOME=/opt/aqmesh/.prefect
+# Bind to localhost only; the server is not exposed publicly.
+ExecStart=/usr/bin/env uv run prefect server start --host 127.0.0.1 --port 4200
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

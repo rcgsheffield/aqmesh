@@ -1,0 +1,21 @@
+# Prefect deployment configuration for the AQMesh pipeline.
+# Deploy with:  uv run prefect deploy
+# Requires a work pool named "aqmesh-pool" and a worker polling it (see deploy/).
+
+name: aqmesh
+prefect-version: 3.7.3
+
+# No remote pull step: the flow code is installed on the VM (uv sync) and the
+# worker runs in the project directory, so it imports the aqmesh_pipeline package.
+pull: null
+
+deployments:
+  - name: hourly
+    entrypoint: src/aqmesh_pipeline/flows/pipeline.py:pipeline
+    description: Download all AQMesh raw data and produce cleaned CSVs.
+    work_pool:
+      name: aqmesh-pool
+    # Pods transmit on the hour; poll a few minutes after (manual section 3.2).
+    schedules:
+      - cron: "6 * * * *"
+        timezone: "Europe/London"

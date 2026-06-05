@@ -1,0 +1,21 @@
+[Unit]
+Description=Prefect worker for the aqmesh-pool (AQMesh pipeline)
+After=prefect-server.service network-online.target
+Wants=network-online.target
+Requires=prefect-server.service
+
+[Service]
+Type=simple
+User=aqmesh
+Group=aqmesh
+WorkingDirectory=/opt/aqmesh
+# AQMesh credentials + data root live in /opt/aqmesh/.env (KEY=VALUE, see .env.example).
+EnvironmentFile=/opt/aqmesh/.env
+Environment=PREFECT_HOME=/opt/aqmesh/.prefect
+Environment=PREFECT_API_URL=http://127.0.0.1:4200/api
+ExecStart=/usr/bin/env uv run prefect worker start --pool aqmesh-pool
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
