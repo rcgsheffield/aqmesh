@@ -220,3 +220,6 @@ __marimo__/
 # AQMesh pipeline project
 /data/
 .prefect/
+
+# Vendor API reference docs (kept locally for reference only)
+AQMesh-API-instructions-*.pdf
