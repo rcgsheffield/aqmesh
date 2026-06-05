@@ -2,22 +2,15 @@
 
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
-
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+This project is early-stage. Security updates are only applied to the latest version on
+the `main` branch.
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+Please report security vulnerabilities by email to the University of Sheffield
+IT Services Information Security team at **info-security@sheffield.ac.uk**. You may also
+CC the maintainer, Joe Heffer (j.heffer@sheffield.ac.uk).
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+**Do not** open a public GitHub issue for security matters.
 
-Email info-security@sheffield.ac.uk
+We will acknowledge your report and keep you informed of our progress.
