@@ -101,8 +101,8 @@ You are welcome to use generative AI tools when contributing, provided that:
 
 ## Contact
 
-Questions about this statement can be directed to the maintainer,
-Joe Heffer (`j.heffer@sheffield.ac.uk`), IT Services Research & Innovation team,
-University of Sheffield.
+Questions about this statement can be directed to the
+IT Services Research & Innovation team
+(`research-it@sheffield.ac.uk`), University of Sheffield.
 
 _Last updated: 2026-06-05._
