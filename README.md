@@ -59,3 +59,8 @@ sudo systemctl restart prefect-worker
 `bootstrap.sh` creates an `aqmesh` service user, installs dependencies, starts the Prefect server,
 creates the `aqmesh-pool` work pool, deploys the hourly schedule (`prefect.yaml`), and starts the
 worker. Check status with `systemctl status prefect-server prefect-worker`.
+
+## Generative AI usage
+
+Parts of this repository were written with AI assistance under human direction. See
+[AI-STATEMENT.md](AI-STATEMENT.md) for details.
