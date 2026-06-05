@@ -80,3 +80,55 @@ def test_authenticate_failure_raises(settings):
     )
     with AQMeshClient(settings) as client, pytest.raises(AQMeshAuthError):
         client.authenticate()
+
+
+@respx.mock
+def test_authenticate_without_token_raises(settings):
+    respx.post(f"{settings.base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"not_a_token": True})
+    )
+    with AQMeshClient(settings) as client, pytest.raises(AQMeshAuthError):
+        client.authenticate()
+
+
+@pytest.fixture
+def _no_backoff_sleep(monkeypatch):
+    """Skip the real backoff sleeps so retry tests stay fast."""
+    monkeypatch.setattr("aqmesh_pipeline.client.time.sleep", lambda _seconds: None)
+
+
+@respx.mock
+def test_get_retries_on_server_error_then_succeeds(settings, assets_payload, _no_backoff_sleep):
+    respx.post(f"{settings.base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"token": "tok"})
+    )
+    respx.get(f"{settings.base_url}/Pods/Assets_V1").mock(
+        side_effect=[httpx.Response(500), httpx.Response(200, json=assets_payload)]
+    )
+    with AQMeshClient(settings) as client:
+        assets = client.get_assets()
+    assert len(assets) == 2
+
+
+@respx.mock
+def test_get_retries_on_transport_error_then_succeeds(settings, assets_payload, _no_backoff_sleep):
+    respx.post(f"{settings.base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"token": "tok"})
+    )
+    respx.get(f"{settings.base_url}/Pods/Assets_V1").mock(
+        side_effect=[httpx.ConnectError("boom"), httpx.Response(200, json=assets_payload)]
+    )
+    with AQMeshClient(settings) as client:
+        assets = client.get_assets()
+    assert len(assets) == 2
+
+
+@respx.mock
+def test_get_raises_after_exhausting_retries(settings, _no_backoff_sleep):
+    respx.post(f"{settings.base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"token": "tok"})
+    )
+    respx.get(f"{settings.base_url}/Pods/Assets_V1").mock(return_value=httpx.Response(500))
+    # settings.max_retries == 2 -> 3 attempts, all 500, then the last error is raised.
+    with AQMeshClient(settings) as client, pytest.raises(httpx.HTTPStatusError):
+        client.get_assets()

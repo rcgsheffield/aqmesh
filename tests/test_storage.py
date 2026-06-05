@@ -36,6 +36,21 @@ def test_read_missing_location_is_empty(settings):
     assert read_raw_readings(settings, 999, Param.GAS).empty
 
 
+def test_read_empty_batches_is_empty(settings):
+    # Files exist but contain no readings -> empty frame, not an error.
+    write_raw_batch(settings, 510, Param.GAS, [], pulled_at="20260101T000000Z", seq=0)
+    assert read_raw_readings(settings, 510, Param.GAS).empty
+
+
+def test_read_without_reading_number_skips_dedup(settings):
+    # Records lacking the reading-number field are returned as-is (no dedup key).
+    records = [{"co_prescaled": 1.0}, {"co_prescaled": 2.0}]
+    write_raw_batch(settings, 510, Param.GAS, records, pulled_at="20260101T000000Z", seq=0)
+    df = read_raw_readings(settings, 510, Param.GAS)
+    assert len(df) == 2
+    assert "gas_reading_number" not in df.columns
+
+
 def test_pointers_round_trip(settings):
     pointers: dict = {}
     update_pointer(

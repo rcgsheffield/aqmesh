@@ -20,6 +20,7 @@ aqmesh = "aqmesh_pipeline.cli:main"
 [dependency-groups]
 dev = [
     "pytest>=8.2",
+    "pytest-cov>=5",
     "respx>=0.21",
     "ruff>=0.6",
 ]
@@ -41,4 +42,19 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+addopts = "-q --cov --cov-report=term-missing"
+
+[tool.coverage.run]
+source = ["aqmesh_pipeline"]
+branch = true
+omit = ["*/__main__.py"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]

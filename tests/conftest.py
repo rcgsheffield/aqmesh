@@ -3,9 +3,27 @@ API payloads modelled on the manual's examples (sections 4.13, 4.15, 4.19)."""
 
 from __future__ import annotations
 
-import pytest
+import os
+import tempfile
 
-from aqmesh_pipeline.config import Settings
+# Isolate Prefect from any developer/CI config and run flows against an in-process
+# ephemeral API backed by a throwaway SQLite DB. Set BEFORE importing prefect so
+# the settings are picked up at import time. (The packaged temporary-server
+# harness is unreachable under WSL2; in-process ephemeral mode works reliably.)
+_PREFECT_HOME = tempfile.mkdtemp(prefix="aqmesh-prefect-test-")
+os.environ.update(
+    PREFECT_HOME=_PREFECT_HOME,
+    PREFECT_SERVER_ALLOW_EPHEMERAL_MODE="true",
+    PREFECT_API_DATABASE_CONNECTION_URL=f"sqlite+aiosqlite:///{_PREFECT_HOME}/test.db",
+    # Quiet flow-run logging (and the noisy "stopping temporary server" line that
+    # the ephemeral server otherwise writes to an already-closed stream at exit).
+    PREFECT_LOGGING_LEVEL="CRITICAL",
+)
+os.environ.pop("PREFECT_API_URL", None)
+
+import pytest  # noqa: E402
+
+from aqmesh_pipeline.config import Settings  # noqa: E402
 
 
 @pytest.fixture
@@ -65,6 +83,19 @@ def gas_batch() -> list[dict]:
         "co_prescaled": 484.49,
     }
     return [first, second]
+
+
+@pytest.fixture
+def seed_raw(settings, gas_batch, particle_batch):
+    """Populate the raw store for location 510 (gas + particle) and return settings."""
+    from aqmesh_pipeline.models import Param
+    from aqmesh_pipeline.storage import write_raw_batch
+
+    write_raw_batch(settings, 510, Param.GAS, gas_batch, pulled_at="20260101T000000Z", seq=0)
+    write_raw_batch(
+        settings, 510, Param.PARTICLE, particle_batch, pulled_at="20260101T000000Z", seq=0
+    )
+    return settings
 
 
 @pytest.fixture
