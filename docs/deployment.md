@@ -16,7 +16,7 @@ For background on running Prefect from the CLI, see the upstream guide:
 
 ## Prerequisites
 
-- An **Ubuntu 24.04** VM with `root` / `sudo` access.
+- An **Ubuntu 24.04** VM with `root` / `sudo` access. See [`system-requirements.md`](system-requirements.md) for sizing (CPU / RAM / disk).
 - Outbound HTTPS access to:
   - `astral.sh` — to install [uv](https://docs.astral.sh/uv/) (the dependency manager).
   - `api.aqmeshdata.net` — the AQMesh production API.
