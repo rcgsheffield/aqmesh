@@ -12,6 +12,8 @@ APP_DIR="${APP_DIR:-/opt/aqmesh}"
 DATA_ROOT="${DATA_ROOT:-/mnt/aqmesh-data}"   # the mounted shared storage volume
 SERVICE_USER="${SERVICE_USER:-aqmesh}"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+API_READY_TIMEOUT="${API_READY_TIMEOUT:-120}"   # seconds to wait for /api/health
+API_READY_INTERVAL="${API_READY_INTERVAL:-2}"   # seconds between probes
 
 echo ">> Creating service user '${SERVICE_USER}'"
 id -u "${SERVICE_USER}" >/dev/null 2>&1 || useradd --system --create-home --shell /usr/sbin/nologin "${SERVICE_USER}"
@@ -32,6 +34,11 @@ echo ">> Installing uv for ${SERVICE_USER} (if missing)"
 if ! sudo -u "${SERVICE_USER}" bash -lc 'command -v uv' >/dev/null 2>&1; then
     sudo -u "${SERVICE_USER}" bash -lc 'curl -LsSf https://astral.sh/uv/install.sh | sh'
 fi
+# The systemd units run `/usr/bin/env uv ...` under systemd's minimal PATH, which does not
+# include the service user's ~/.local/bin. Symlink uv onto the default system PATH so the
+# units can find it (otherwise they crash-loop with exit code 127).
+UV_BIN="$(sudo -u "${SERVICE_USER}" bash -lc 'command -v uv')"
+ln -sf "${UV_BIN}" /usr/local/bin/uv
 
 echo ">> Installing Python dependencies (uv sync)"
 sudo -u "${SERVICE_USER}" bash -lc "cd '${APP_DIR}' && uv sync --no-dev"
@@ -56,14 +63,28 @@ systemctl daemon-reload
 systemctl enable prefect-server.service
 systemctl restart prefect-server.service
 
-echo ">> Waiting for the Prefect API to come up"
-for _ in $(seq 1 30); do
-    if sudo -u "${SERVICE_USER}" bash -lc "cd '${APP_DIR}' && PREFECT_API_URL=http://127.0.0.1:4200/api uv run prefect server database --help" >/dev/null 2>&1 \
-       && curl -fsS http://127.0.0.1:4200/api/health >/dev/null 2>&1; then
+echo ">> Waiting for the Prefect API to come up (timeout ${API_READY_TIMEOUT}s)"
+ready=0
+deadline=$(( SECONDS + API_READY_TIMEOUT ))
+while (( SECONDS < deadline )); do
+    if ! systemctl is-active --quiet prefect-server.service; then
+        echo ">> prefect-server.service is not active; aborting wait"
         break
     fi
-    sleep 2
+    if curl -fsS http://127.0.0.1:4200/api/health >/dev/null 2>&1; then
+        ready=1
+        break
+    fi
+    sleep "${API_READY_INTERVAL}"
 done
+
+if [[ "${ready}" -ne 1 ]]; then
+    echo ">> ERROR: Prefect API never became ready at http://127.0.0.1:4200/api" >&2
+    systemctl status prefect-server.service --no-pager >&2 || true
+    journalctl -u prefect-server.service -n 50 --no-pager >&2 || true
+    exit 1
+fi
+echo ">> Prefect API is ready"
 
 echo ">> Creating work pool and deploying the flow"
 sudo -u "${SERVICE_USER}" bash -lc "cd '${APP_DIR}' && \
@@ -74,6 +95,17 @@ sudo -u "${SERVICE_USER}" bash -lc "cd '${APP_DIR}' && \
 # 'restart' so an update reloads the worker (it holds imported flow code and deps in memory).
 systemctl enable prefect-worker.service
 systemctl restart prefect-worker.service
+
+# A worker that starts then dies (Restart=on-failure) would still let 'restart' return success,
+# so verify it actually stayed up rather than silently printing ">> Done".
+sleep "${API_READY_INTERVAL}"
+if ! systemctl is-active --quiet prefect-worker.service; then
+    echo ">> ERROR: prefect-worker.service failed to start" >&2
+    echo "   (On a first run this is expected until ${APP_DIR}/.env has real credentials.)" >&2
+    systemctl status prefect-worker.service --no-pager >&2 || true
+    journalctl -u prefect-worker.service -n 50 --no-pager >&2 || true
+    exit 1
+fi
 
 echo ">> Done. Check status with:"
 echo "     systemctl status prefect-server prefect-worker"
