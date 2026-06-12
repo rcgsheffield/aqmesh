@@ -19,8 +19,9 @@ id -u "${SERVICE_USER}" >/dev/null 2>&1 || useradd --system --create-home --shel
 echo ">> Installing application to ${APP_DIR}"
 mkdir -p "${APP_DIR}"
 # Copy the repo (excluding local data and venv) into the app dir.
+# NB: '.env' is excluded so re-runs (updates) do not wipe the deployed credentials.
 rsync -a --delete \
-    --exclude '.git' --exclude '.venv' --exclude 'data' --exclude '.prefect' \
+    --exclude '.git' --exclude '.venv' --exclude 'data' --exclude '.prefect' --exclude '.env' \
     "${REPO_DIR}/" "${APP_DIR}/"
 
 echo ">> Ensuring data root ${DATA_ROOT} exists"
@@ -49,7 +50,11 @@ echo ">> Installing systemd units"
 install -m 0644 "${APP_DIR}/deploy/systemd/prefect-server.service" /etc/systemd/system/
 install -m 0644 "${APP_DIR}/deploy/systemd/prefect-worker.service" /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now prefect-server.service
+# 'restart' (not 'enable --now') so a re-run actually reloads new code/deps: a running
+# unit is restarted, a stopped one is started. The server restarts first so any Prefect
+# database migrations apply before the worker reconnects.
+systemctl enable prefect-server.service
+systemctl restart prefect-server.service
 
 echo ">> Waiting for the Prefect API to come up"
 for _ in $(seq 1 30); do
@@ -66,7 +71,9 @@ sudo -u "${SERVICE_USER}" bash -lc "cd '${APP_DIR}' && \
     uv run prefect work-pool create --type process aqmesh-pool 2>/dev/null || true && \
     uv run prefect deploy --all"
 
-systemctl enable --now prefect-worker.service
+# 'restart' so an update reloads the worker (it holds imported flow code and deps in memory).
+systemctl enable prefect-worker.service
+systemctl restart prefect-worker.service
 
 echo ">> Done. Check status with:"
 echo "     systemctl status prefect-server prefect-worker"
