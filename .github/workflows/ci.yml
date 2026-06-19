@@ -43,6 +43,21 @@ jobs:
           printf '  %s\n' "${scripts[@]}"
           shellcheck "${scripts[@]}"
 
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - name: pip-audit (dependency vulnerabilities)
+        run: uv run pip-audit
+      - name: Bandit (warn on medium severity)
+        run: uv run bandit -c pyproject.toml -r src -ll --exit-zero
+      - name: Bandit (fail on high severity)
+        run: uv run bandit -c pyproject.toml -r src -lll
+
   test:
     runs-on: ubuntu-latest
     strategy:
