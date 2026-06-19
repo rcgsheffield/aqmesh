@@ -1,13 +1,6 @@
 # AQMesh API reference
 
-A curated, agent- and human-readable distillation of the vendor manual
-**`AQMesh-API-instructions-V2.18.pdf`** (kept in the repo root). The PDF is the
-authoritative source; this set extracts the parts the pipeline cares about —
-endpoint paths, parameters, and response shapes — without the manual's large
-example-data dumps.
-
-Each page links to the others and to the code that calls the endpoint, so you
-can jump between "what the API offers" and "where we use it".
+A curated, agent- and human-readable distillation of the [vendor API manual](https://www.aqmesh.com/techsupport/api-example/).
 
 ## Pages
 
