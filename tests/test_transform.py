@@ -113,7 +113,7 @@ def test_resample_5min_empty_bins_are_nan_and_wallclock_aligned():
     assert out.loc["2026-01-01 09:15:00", "co"] == pytest.approx(40.0)
 
 
-def test_resample_5min_preserves_identity_drops_per_reading_fields():
+def test_resample_5min_preserves_identity_keeps_all_columns():
     df = _cleaned_frame(
         [
             {
@@ -127,12 +127,50 @@ def test_resample_5min_preserves_identity_drops_per_reading_fields():
         ]
     )
     out = resample_5min(df)
+    # Identity columns kept as their original value (not coerced to a float average).
     assert out.loc[0, "location_number"] == 510
     assert out.loc[0, "pod_serial_number"] == 2410149
     assert list(out.columns)[:3] == ["reading_datestamp", "location_number", "pod_serial_number"]
-    # Per-reading id and non-numeric status cannot be averaged -> dropped.
-    assert "reading_number" not in out.columns
-    assert "reading_status" not in out.columns
+    # Nothing is filtered out: every other column is carried through too.
+    assert "reading_number" in out.columns  # numeric -> averaged
+    assert "co" in out.columns
+    assert "reading_status" in out.columns  # non-numeric -> joined distinct
+
+
+def test_resample_5min_joins_distinct_status_within_bin():
+    df = _cleaned_frame(
+        [
+            {
+                "location_number": 510,
+                "pod_serial_number": 2410149,
+                "reading_number": 1,
+                "reading_datestamp": "2026-01-01T09:01:00",
+                "co": 10.0,
+                "reading_status": "OK",
+            },
+            {
+                "location_number": 510,
+                "pod_serial_number": 2410149,
+                "reading_number": 2,
+                "reading_datestamp": "2026-01-01T09:03:00",
+                "co": 20.0,
+                "reading_status": "FAULT",
+            },
+            {
+                "location_number": 510,
+                "pod_serial_number": 2410149,
+                "reading_number": 3,
+                "reading_datestamp": "2026-01-01T09:12:00",
+                "co": 30.0,
+                "reading_status": "OK",
+            },
+        ]
+    )
+    out = resample_5min(df).set_index("reading_datestamp")
+    # Non-numeric status is not averaged; distinct values in the bin are joined.
+    assert out.loc["2026-01-01 09:00:00", "reading_status"] == "FAULT;OK"
+    # An empty bin reads as NaN for the status column too (no forward-fill).
+    assert pd.isna(out.loc["2026-01-01 09:05:00", "reading_status"])
 
 
 def test_resample_5min_skips_nan_within_bin():

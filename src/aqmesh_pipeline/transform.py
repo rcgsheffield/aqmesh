@@ -140,21 +140,35 @@ def clean_readings(df: pd.DataFrame, param: Param) -> pd.DataFrame:
 _IDENTITY_COLS = ("location_number", "pod_serial_number")
 
 
+def _join_distinct(values: pd.Series) -> object:
+    """Join the distinct non-null values in a bin into a single ``;``-separated string.
+
+    Used to aggregate non-numeric columns (e.g. ``reading_status``) that cannot be
+    averaged. Returns ``NaN`` for an empty bin so it reads the same as an empty
+    numeric bin.
+    """
+    distinct = values.dropna().unique()
+    if len(distinct) == 0:
+        return float("nan")
+    return ";".join(sorted(str(v) for v in distinct))
+
+
 def resample_5min(df: pd.DataFrame, freq: str = "5min") -> pd.DataFrame:
     """Resample a cleaned location/param frame onto a regular time grid.
 
     Expects the output of :func:`clean_readings` for a single pod: a frame with a
-    ``reading_datestamp`` column and one column per pollutant. Numeric measurement
-    columns are averaged within each ``freq`` bucket (the bucket value is the
-    **mean** of the readings it contains, ignoring missing values), and buckets
-    that contain no readings become ``NaN`` -- there is no forward-fill. Buckets
-    are aligned to wall-clock marks (00:00, 00:05, ... for the default 5-minute
-    grid).
+    ``reading_datestamp`` column and one column per pollutant. Every column is
+    carried through -- nothing is filtered out, so researchers can decide what to
+    work with. Within each ``freq`` bucket, numeric columns are averaged (the
+    bucket value is the **mean** of the readings it contains, ignoring missing
+    values) and non-numeric columns (e.g. ``reading_status``) are aggregated to the
+    ``;``-joined distinct values seen in the bucket. Buckets that contain no
+    readings become ``NaN`` -- there is no forward-fill. Buckets are aligned to
+    wall-clock marks (00:00, 00:05, ... for the default 5-minute grid).
 
-    The per-reading identifier (``reading_number``) and any non-numeric
-    passthrough (e.g. ``reading_status``) are dropped, since neither can be
-    meaningfully averaged. ``location_number`` and ``pod_serial_number`` are
-    constant within the frame and are preserved as leading columns.
+    ``location_number`` and ``pod_serial_number`` are constant within the frame and
+    are preserved as leading columns (keeping their original dtype rather than being
+    coerced to a float average).
 
     Args:
         df: Cleaned readings for one location/param, as returned by
@@ -163,7 +177,7 @@ def resample_5min(df: pd.DataFrame, freq: str = "5min") -> pd.DataFrame:
 
     Returns:
         A frame with one row per ``freq`` bucket from the first to the last
-        reading, carrying the averaged measurement columns. Empty in -> empty out.
+        reading, carrying every (aggregated) column. Empty in -> empty out.
     """
     if df.empty:
         return df
@@ -171,13 +185,12 @@ def resample_5min(df: pd.DataFrame, freq: str = "5min") -> pd.DataFrame:
     identity = {col: df[col].iloc[0] for col in _IDENTITY_COLS if col in df.columns}
     indexed = df.set_index("reading_datestamp").sort_index()
 
-    skip = set(_IDENTITY_COLS) | {"reading_number"}
-    value_cols = [
-        col
+    agg = {
+        col: ("mean" if pd.api.types.is_numeric_dtype(indexed[col]) else _join_distinct)
         for col in indexed.columns
-        if col not in skip and pd.api.types.is_numeric_dtype(indexed[col])
-    ]
-    resampled = indexed[value_cols].resample(freq).mean()
+        if col not in _IDENTITY_COLS
+    }
+    resampled = indexed.resample(freq).agg(agg)
 
     for offset, (col, value) in enumerate(identity.items()):
         resampled.insert(offset, col, value)

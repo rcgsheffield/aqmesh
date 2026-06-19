@@ -80,6 +80,10 @@ Raw files are never modified or deleted — the clean step always rebuilds from 
   regular 5-minute grid, written to the separate `resampled/` tree. Bins are aligned to wall-clock
   marks (00:00, 00:05, …); each bin value is the **mean** of the readings it contains (NaN within a
   bin is skipped, so sentinel-blanked values do not poison the average); bins containing no readings
-  are left **NaN** with no forward-fill. The per-reading `clean/` CSVs are always produced as well,
-  so raw cadence stays accessible. Resampling runs by default; `aqmesh clean --no-resample` (and
+  are left **NaN** with no forward-fill. Every column is carried through — nothing is filtered out, so
+  researchers can decide what to use: numeric columns (pollutants and environmental/housekeeping
+  readings alike) are averaged, while non-numeric columns (e.g. `reading_status`) are aggregated to
+  the `;`-joined distinct values in each bin. `location_number` and `pod_serial_number` are kept as
+  leading identity columns. The per-reading `clean/` CSVs are always produced as well, so raw cadence
+  stays accessible. Resampling runs by default; `aqmesh clean --no-resample` (and
   `aqmesh pipeline --no-resample`) skips the `resampled/` output.
