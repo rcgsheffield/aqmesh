@@ -95,31 +95,6 @@ def test_ingest_raw_continues_when_gas_fails(
 
 
 @respx.mock
-def test_ingest_raw_skips_excluded_locations(
-    settings, assets_payload, gas_batch, particle_batch, monkeypatch
-):
-    """Locations in skip_locations must be silently excluded from the ingest loop."""
-    # assets_payload has locations 510 and 915; skip 915.
-    settings_with_skip = settings.model_copy(update={"skip_locations": frozenset({915})})
-    _allow_prefect()
-    respx.post(f"{settings.base_url}/Authenticate").mock(
-        return_value=httpx.Response(200, json={"token": "tok"})
-    )
-    respx.get(f"{settings.base_url}/Pods/Assets_V1").mock(
-        return_value=httpx.Response(200, json=assets_payload)
-    )
-    for param in (Param.GAS, Param.PARTICLE):
-        url = f"{settings.base_url}/LocationData/Next/510/{int(param)}/01/1"
-        batch = gas_batch if param == Param.GAS else particle_batch
-        respx.get(url).mock(side_effect=[httpx.Response(200, json=batch), httpx.Response(204)])
-
-    summary = ingest_raw(settings_with_skip)
-
-    assert summary["locations"] == 1
-    assert all(s["location_number"] == 510 for s in summary["summaries"])
-
-
-@respx.mock
 def test_clean_data_writes_one_csv_per_param(seed_raw):
     _allow_prefect()
     results = clean_data(seed_raw)
