@@ -28,6 +28,12 @@ uv run ruff check .           # lint
 uv run pytest                 # tests
 ```
 
+> [!WARNING]
+> Always use **test credentials** (`AQMESH_ENVIRONMENT=test`) when running the pipeline
+> locally. The AQMesh API advances the data cursor server-side on every successful
+> request; running with production credentials during local development will modify
+> production state and may cause the live pipeline to skip data.
+
 We use [pre-commit](https://pre-commit.com/) to keep `uv.lock` in sync with
 `pyproject.toml` (CI rejects a stale lockfile). Install and enable the hooks once per
 clone:
