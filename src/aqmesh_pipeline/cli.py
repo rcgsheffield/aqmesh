@@ -5,7 +5,9 @@ Usage::
     aqmesh pipeline      # ingest + clean (default)
     aqmesh ingest        # download raw data only
     aqmesh clean         # rebuild cleaned CSVs from the raw store
-    aqmesh check         # smoke-test: authenticate and list pods (no writes)
+    aqmesh check         # smoke-test: authenticate, list pods, server health (no writes)
+    aqmesh ping          # server health/freshness probe (no credentials required)
+    aqmesh sensors       # report sensor age/expiry/failures across the fleet (read-only)
     aqmesh repeat        # re-ingest the last delivered batch (does not advance cursor)
 """
 
@@ -29,22 +31,43 @@ from .models import Param
 from .storage import write_raw_batch
 
 
+def _resolve_settings(settings: Settings | None) -> Settings:
+    """Return ``settings`` or load them from the environment, exiting 1 if credentials
+    are missing or invalid."""
+    if settings is not None:
+        return settings
+    try:
+        return get_settings()
+    except ValidationError as exc:
+        print(
+            "Missing or invalid credentials — set AQMESH_USERNAME and "
+            "AQMESH_PASSWORD (see .env.example).\n"
+            f"{exc}"
+        )
+        raise SystemExit(1) from exc
+
+
+def _resolve_settings_optional(settings: Settings | None) -> Settings:
+    """Like :func:`_resolve_settings`, but tolerate missing credentials.
+
+    Used by commands (``ping``) that hit unauthenticated endpoints — the
+    environment still selects test vs prod, so a blank credential is harmless.
+    """
+    if settings is not None:
+        return settings
+    try:
+        return get_settings()
+    except ValidationError:
+        return Settings(username="", password="")  # type: ignore[call-arg]
+
+
 def check(settings: Settings | None = None) -> None:
-    """Smoke-test connectivity: load settings, authenticate, and list pods.
+    """Smoke-test connectivity: load settings, authenticate, list pods, report health.
 
     Read-only — downloads no readings and writes nothing to disk. Exits non-zero
     (``SystemExit(1)``) on any failure so it is usable in scripts and CI.
     """
-    if settings is None:
-        try:
-            settings = get_settings()
-        except ValidationError as exc:
-            print(
-                "Missing or invalid credentials — set AQMESH_USERNAME and "
-                "AQMESH_PASSWORD (see .env.example).\n"
-                f"{exc}"
-            )
-            raise SystemExit(1) from exc
+    settings = _resolve_settings(settings)
 
     print(
         f"Checking AQMesh API ({settings.environment}) at {settings.base_url} "
@@ -54,6 +77,8 @@ def check(settings: Settings | None = None) -> None:
         with AQMeshClient(settings) as client:
             client.authenticate()
             assets = client.get_assets()
+            ping = _safe(lambda: client.server_ping())
+            notices = _safe(lambda: client.get_system_notifications()) or []
     except AQMeshAuthError as exc:
         print(f"Authentication failed: {exc}")
         raise SystemExit(1) from exc
@@ -62,11 +87,112 @@ def check(settings: Settings | None = None) -> None:
         raise SystemExit(1) from exc
 
     print(f"OK — authenticated, {len(assets)} asset(s) visible.")
+    if ping is not None:
+        print(
+            f"  server version {ping.version}; most recent reading "
+            f"{ping.most_recent_reading}; last communication {ping.last_communication}"
+        )
+    for notice in notices:
+        print(f"  notice: {notice}")
     for asset in assets[:10]:
         name = asset.location_name or "(unnamed)"
         print(f"  location {asset.location_number}: {name} [serial {asset.serial_number}]")
     if len(assets) > 10:
         print(f"  ... and {len(assets) - 10} more.")
+
+
+def _safe(call):
+    """Run ``call`` and return its result, or None if it raises an HTTP error.
+
+    Lets ``check`` add best-effort health context without one optional endpoint
+    failing the whole command.
+    """
+    try:
+        return call()
+    except httpx.HTTPError as exc:
+        print(f"  (unavailable: {exc})")
+        return None
+
+
+def ping(settings: Settings | None = None) -> None:
+    """Query the server health endpoint (manual 4.16) and print a freshness summary.
+
+    Needs no credentials, so it answers "is the AQMesh server up and how fresh is
+    its data?" independently of whether our account can authenticate. Exits non-zero
+    if the server cannot be reached.
+    """
+    settings = _resolve_settings_optional(settings)
+    print(f"Pinging AQMesh API ({settings.environment}) at {settings.base_url} ...")
+    try:
+        with AQMeshClient(settings) as client:
+            snapshot = client.server_ping()
+    except httpx.HTTPError as exc:
+        print(f"Could not reach the AQMesh API at {settings.base_url}: {exc}")
+        raise SystemExit(1) from exc
+
+    print(f"OK — server version {snapshot.version}")
+    print(f"  server time:           {snapshot.server_time}")
+    print(f"  most recent reading:   {snapshot.most_recent_reading}")
+    print(f"  last communication:    {snapshot.last_communication}")
+    print(f"  most recent processed: {snapshot.most_recent_processed}")
+
+
+def _sensors_cmd(argv: Sequence[str], settings: Settings | None = None) -> None:
+    """Report fleet sensor health: per-sensor age/expiry/replacement and failed sensors."""
+    parser = argparse.ArgumentParser(
+        prog="aqmesh sensors",
+        description=(
+            "Report pod sensor health across the fleet: per-sensor status, age, and "
+            "expiry (manual 4.20) plus sensors that have tripped fail criteria (4.8). "
+            "Read-only — makes no changes."
+        ),
+    )
+    parser.add_argument(
+        "--active",
+        action="store_true",
+        help="Only include active/installed pods (manual 4.20 Active=1). Default: all deployed.",
+    )
+    parser.add_argument(
+        "--failed-only",
+        action="store_true",
+        help="Show only the failed-sensors report, skipping the full sensor inventory.",
+    )
+    args = parser.parse_args(argv)
+
+    settings = _resolve_settings(settings)
+
+    print(f"Querying sensor health ({settings.environment}) at {settings.base_url} ...")
+    try:
+        with AQMeshClient(settings) as client:
+            client.authenticate()
+            failed = client.get_failed_sensors()
+            details = [] if args.failed_only else client.get_sensor_details(active=args.active)
+    except AQMeshAuthError as exc:
+        print(f"Authentication failed: {exc}")
+        raise SystemExit(1) from exc
+    except httpx.HTTPError as exc:
+        print(f"Could not reach the AQMesh API at {settings.base_url}: {exc}")
+        raise SystemExit(1) from exc
+
+    if not args.failed_only:
+        print(f"\n{len(details)} sensor(s) reported:")
+        for d in details:
+            flag = "  ⚠ replace" if d.replacement_needed else ""
+            age = f"{d.age_in_months}mo" if d.age_in_months is not None else "?"
+            print(
+                f"  pod {d.serial_number} {d.sensor_type_name}: "
+                f"{d.sensor_status_name}, age {age}, expires {d.expiry_date}{flag}"
+            )
+        flagged = [d for d in details if d.replacement_needed]
+        if flagged:
+            print(f"\n{len(flagged)} sensor(s) recommended for replacement.")
+
+    print(f"\n{len(failed)} failed sensor(s):")
+    for f in failed:
+        print(
+            f"  pod {f.pod_serial_number} {f.sensor_type} "
+            f"(sensor {f.sensor_serial_number}): {f.fail_type} on {f.fail_date} — {f.status}"
+        )
 
 
 def _repeat_last_cmd(argv: Sequence[str], settings: Settings | None = None) -> None:
@@ -134,15 +260,7 @@ def _repeat_last_cmd(argv: Sequence[str], settings: Settings | None = None) -> N
         print("Dry run — no API calls made.")
         return
 
-    if settings is None:
-        try:
-            settings = get_settings()
-        except ValidationError as exc:
-            print(
-                "Missing or invalid credentials — set AQMESH_USERNAME and "
-                f"AQMESH_PASSWORD (see .env.example).\n{exc}"
-            )
-            raise SystemExit(1) from exc
+    settings = _resolve_settings(settings)
 
     env_label = f"[{settings.environment.upper()}]"
 
@@ -228,17 +346,24 @@ _COMMANDS = {
     "ingest": ingest_raw,
     "clean": clean_data,
     "check": check,
+    "ping": ping,
+}
+
+# Commands that take their own arguments and are dispatched before argparse.
+_ARGV_COMMANDS = {
+    "repeat": _repeat_last_cmd,
+    "sensors": _sensors_cmd,
 }
 
 
 def main(argv: Sequence[str] | None = None) -> None:
     argv_list = list(argv) if argv is not None else sys.argv[1:]
 
-    if argv_list and argv_list[0] == "repeat":
+    if argv_list and argv_list[0] in _ARGV_COMMANDS:
         logging.basicConfig(
             level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
         )
-        _repeat_last_cmd(argv_list[1:])
+        _ARGV_COMMANDS[argv_list[0]](argv_list[1:])
         return
 
     parser = argparse.ArgumentParser(prog="aqmesh", description="AQMesh data pipeline.")
