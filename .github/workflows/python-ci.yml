@@ -1,9 +1,21 @@
-name: CI
+name: Python CI
 
 on:
   push:
     branches: [main]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/python-ci.yml"
   pull_request:
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/python-ci.yml"
 
 permissions:
   contents: read
@@ -24,24 +36,20 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
 
-  shellcheck:
+  security:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - name: Run ShellCheck
-        run: |
-          mapfile -t scripts < <(
-            {
-              git ls-files '*.sh' '*.bash'
-              git grep -lE '^#!.*\b(bash|sh)\b' -- ':!*.sh' ':!*.bash'
-            } | sort -u
-          )
-          if [ "${#scripts[@]}" -eq 0 ]; then
-            echo "No shell scripts found."; exit 0
-          fi
-          printf 'Linting %d script(s):\n' "${#scripts[@]}"
-          printf '  %s\n' "${scripts[@]}"
-          shellcheck "${scripts[@]}"
+      - uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - name: pip-audit (dependency vulnerabilities)
+        run: uv run pip-audit
+      - name: Bandit (warn on medium severity)
+        run: uv run bandit -c pyproject.toml -r src -ll --exit-zero
+      - name: Bandit (fail on high severity)
+        run: uv run bandit -c pyproject.toml -r src -lll
 
   test:
     runs-on: ubuntu-latest
