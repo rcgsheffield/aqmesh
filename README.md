@@ -26,7 +26,8 @@ CLI: aqmesh pipeline | ingest | clean | check
 
 ## Development
 
-Requires [uv](https://docs.astral.sh/uv/) and Python 3.12+.
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full guide to setting up your environment,
+coding standards, and submitting changes. Quick start:
 
 ```bash
 uv sync                       # create venv + install deps
