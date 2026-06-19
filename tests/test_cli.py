@@ -75,16 +75,27 @@ def test_check_missing_credentials_exits_nonzero(monkeypatch, tmp_path):
 @pytest.mark.parametrize("command", ["pipeline", "ingest", "clean", "check"])
 def test_main_routes_to_command(monkeypatch, command):
     called = []
-    monkeypatch.setitem(cli._COMMANDS, command, lambda: called.append(command))
+    monkeypatch.setitem(cli._COMMANDS, command, lambda **kw: called.append(command))
     cli.main([command])
     assert called == [command]
 
 
 def test_main_defaults_to_pipeline(monkeypatch):
     called = []
-    monkeypatch.setitem(cli._COMMANDS, "pipeline", lambda: called.append("pipeline"))
+    monkeypatch.setitem(cli._COMMANDS, "pipeline", lambda **kw: called.append("pipeline"))
     cli.main([])  # no command -> default
     assert called == ["pipeline"]
+
+
+@pytest.mark.parametrize("command", ["clean", "pipeline"])
+def test_main_resample_flag_threaded(monkeypatch, command):
+    seen = {}
+    monkeypatch.setitem(cli._COMMANDS, command, lambda resample: seen.update(resample=resample))
+    cli.main([command])
+    assert seen == {"resample": True}  # on by default
+    seen.clear()
+    cli.main([command, "--no-resample"])
+    assert seen == {"resample": False}
 
 
 def test_main_rejects_unknown_command():

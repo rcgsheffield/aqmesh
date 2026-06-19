@@ -57,6 +57,11 @@ clean/
     aqmesh_<n>_gas.csv              # scaled readings, sentinels → NaN
     aqmesh_<n>_particle.csv
 
+resampled/
+  location=<n>/
+    aqmesh_<n>_gas_5min.csv         # clean readings averaged onto a 5-min grid
+    aqmesh_<n>_particle_5min.csv
+
 state/
   pointers.json                     # cursor per location/param pair — safe to restart mid-run
 ```
@@ -71,5 +76,10 @@ Raw files are never modified or deleted — the clean step always rebuilds from 
   `state/pointers.json` exactly where it left off.
 - **Single idempotent deploy script** — `deploy/bootstrap.sh` is the update path as well as the
   install path, so there is no separate upgrade procedure.
-- **5-minute resampling** — `transform.resample_5min` is scaffolded but not yet implemented. The
-  pipeline currently produces cleaned per-reading data without time-bucketing.
+- **5-minute resampling** — `transform.resample_5min` averages the cleaned per-reading data onto a
+  regular 5-minute grid, written to the separate `resampled/` tree. Bins are aligned to wall-clock
+  marks (00:00, 00:05, …); each bin value is the **mean** of the readings it contains (NaN within a
+  bin is skipped, so sentinel-blanked values do not poison the average); bins containing no readings
+  are left **NaN** with no forward-fill. The per-reading `clean/` CSVs are always produced as well,
+  so raw cadence stays accessible. Resampling runs by default; `aqmesh clean --no-resample` (and
+  `aqmesh pipeline --no-resample`) skips the `resampled/` output.

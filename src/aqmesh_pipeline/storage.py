@@ -41,6 +41,14 @@ def clean_csv_path(settings: Settings, location_number: int, param: Param) -> Pa
     )
 
 
+def resampled_csv_path(settings: Settings, location_number: int, param: Param) -> Path:
+    return (
+        settings.resampled_dir
+        / f"location={location_number}"
+        / f"aqmesh_{location_number}_{param.label}_5min.csv"
+    )
+
+
 def pointers_path(settings: Settings) -> Path:
     return settings.state_dir / POINTERS_FILENAME
 

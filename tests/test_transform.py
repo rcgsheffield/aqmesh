@@ -47,6 +47,117 @@ def test_clean_empty_returns_empty():
     assert out.empty
 
 
-def test_resample_5min_is_deferred(gas_batch):
-    with pytest.raises(NotImplementedError):
-        resample_5min(pd.DataFrame(gas_batch))
+def _cleaned_frame(rows: list[dict]) -> pd.DataFrame:
+    """Build a cleaned-style frame (datetime reading_datestamp) from row dicts."""
+    df = pd.DataFrame(rows)
+    df["reading_datestamp"] = pd.to_datetime(df["reading_datestamp"])
+    return df
+
+
+def test_resample_5min_averages_within_bin():
+    df = _cleaned_frame(
+        [
+            {
+                "location_number": 510,
+                "pod_serial_number": 2410149,
+                "reading_number": 1,
+                "reading_datestamp": "2026-01-01T09:01:00",
+                "co": 10.0,
+            },
+            {
+                "location_number": 510,
+                "pod_serial_number": 2410149,
+                "reading_number": 2,
+                "reading_datestamp": "2026-01-01T09:03:00",
+                "co": 20.0,
+            },
+        ]
+    )
+    out = resample_5min(df)
+    assert len(out) == 1
+    assert out.loc[0, "reading_datestamp"] == pd.Timestamp("2026-01-01 09:00:00")
+    assert out.loc[0, "co"] == pytest.approx(15.0)
+
+
+def test_resample_5min_empty_bins_are_nan_and_wallclock_aligned():
+    df = _cleaned_frame(
+        [
+            {
+                "location_number": 510,
+                "pod_serial_number": 2410149,
+                "reading_number": 1,
+                "reading_datestamp": "2026-01-01T09:02:00",
+                "co": 10.0,
+            },
+            {
+                "location_number": 510,
+                "pod_serial_number": 2410149,
+                "reading_number": 2,
+                "reading_datestamp": "2026-01-01T09:17:00",
+                "co": 40.0,
+            },
+        ]
+    )
+    out = resample_5min(df).set_index("reading_datestamp")
+    # Bins aligned to wall-clock 5-min marks, spanning first to last reading.
+    assert list(out.index) == [
+        pd.Timestamp("2026-01-01 09:00:00"),
+        pd.Timestamp("2026-01-01 09:05:00"),
+        pd.Timestamp("2026-01-01 09:10:00"),
+        pd.Timestamp("2026-01-01 09:15:00"),
+    ]
+    assert out.loc["2026-01-01 09:00:00", "co"] == pytest.approx(10.0)
+    # Bins with no readings are NaN (no forward-fill).
+    assert math.isnan(out.loc["2026-01-01 09:05:00", "co"])
+    assert math.isnan(out.loc["2026-01-01 09:10:00", "co"])
+    assert out.loc["2026-01-01 09:15:00", "co"] == pytest.approx(40.0)
+
+
+def test_resample_5min_preserves_identity_drops_per_reading_fields():
+    df = _cleaned_frame(
+        [
+            {
+                "location_number": 510,
+                "pod_serial_number": 2410149,
+                "reading_number": 1,
+                "reading_datestamp": "2026-01-01T09:01:00",
+                "co": 10.0,
+                "reading_status": "OK",
+            },
+        ]
+    )
+    out = resample_5min(df)
+    assert out.loc[0, "location_number"] == 510
+    assert out.loc[0, "pod_serial_number"] == 2410149
+    assert list(out.columns)[:3] == ["reading_datestamp", "location_number", "pod_serial_number"]
+    # Per-reading id and non-numeric status cannot be averaged -> dropped.
+    assert "reading_number" not in out.columns
+    assert "reading_status" not in out.columns
+
+
+def test_resample_5min_skips_nan_within_bin():
+    df = _cleaned_frame(
+        [
+            {
+                "location_number": 510,
+                "pod_serial_number": 2410149,
+                "reading_number": 1,
+                "reading_datestamp": "2026-01-01T09:01:00",
+                "co": float("nan"),
+            },
+            {
+                "location_number": 510,
+                "pod_serial_number": 2410149,
+                "reading_number": 2,
+                "reading_datestamp": "2026-01-01T09:03:00",
+                "co": 20.0,
+            },
+        ]
+    )
+    out = resample_5min(df)
+    # A sentinel-blanked reading does not poison the bucket mean.
+    assert out.loc[0, "co"] == pytest.approx(20.0)
+
+
+def test_resample_5min_empty_returns_empty():
+    assert resample_5min(pd.DataFrame()).empty

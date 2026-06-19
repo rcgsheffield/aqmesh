@@ -12,7 +12,12 @@ from aqmesh_pipeline.flows.clean import clean_data
 from aqmesh_pipeline.flows.ingest import ingest_raw
 from aqmesh_pipeline.flows.pipeline import pipeline
 from aqmesh_pipeline.models import Param
-from aqmesh_pipeline.storage import clean_csv_path, load_pointers, raw_param_dir
+from aqmesh_pipeline.storage import (
+    clean_csv_path,
+    load_pointers,
+    raw_param_dir,
+    resampled_csv_path,
+)
 
 
 def _allow_prefect():
@@ -103,6 +108,30 @@ def test_clean_data_writes_one_csv_per_param(seed_raw):
     assert len(written) == 2  # gas + particle for location 510
     assert clean_csv_path(seed_raw, 510, Param.GAS).exists()
     assert clean_csv_path(seed_raw, 510, Param.PARTICLE).exists()
+
+
+@respx.mock
+def test_clean_data_writes_resampled_csv_by_default(seed_raw):
+    _allow_prefect()
+    results = clean_data(seed_raw)
+
+    # Both the per-reading and resampled CSVs are produced for each param.
+    assert all(r["resampled_csv"] for r in results if r["csv"])
+    assert clean_csv_path(seed_raw, 510, Param.GAS).exists()
+    assert resampled_csv_path(seed_raw, 510, Param.GAS).exists()
+    assert resampled_csv_path(seed_raw, 510, Param.PARTICLE).exists()
+
+
+@respx.mock
+def test_clean_data_no_resample_skips_resampled_csv(seed_raw):
+    _allow_prefect()
+    results = clean_data(seed_raw, resample=False)
+
+    # Per-reading CSVs still written; resampled tree is not.
+    assert all(r["resampled_csv"] is None for r in results)
+    assert clean_csv_path(seed_raw, 510, Param.GAS).exists()
+    assert not resampled_csv_path(seed_raw, 510, Param.GAS).exists()
+    assert not seed_raw.resampled_dir.exists()
 
 
 @respx.mock

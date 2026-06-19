@@ -8,7 +8,7 @@ Two cleaning steps are applied (manual sections 4.12-4.15):
    measurement via ``value = prescaled * slope + offset``.
 
 The output is one tidy row per ``reading_datestamp`` with one column per pollutant.
-5-minute resampling is intentionally deferred (see :func:`resample_5min`).
+:func:`resample_5min` optionally aggregates this onto a regular 5-minute grid.
 """
 
 from __future__ import annotations
@@ -135,16 +135,50 @@ def clean_readings(df: pd.DataFrame, param: Param) -> pd.DataFrame:
     return clean_gas(df) if param is Param.GAS else clean_particle(df)
 
 
-def resample_5min(df: pd.DataFrame, freq: str = "5min") -> pd.DataFrame:  # noqa: ARG001
-    """DEFERRED: resample cleaned readings onto regular 5-minute buckets.
+#: Identity columns that are constant within one location/param frame and are
+#: carried through resampling unchanged rather than averaged.
+_IDENTITY_COLS = ("location_number", "pod_serial_number")
 
-    This is the planned next extension. The intended behaviour (to be confirmed
-    with researchers): build a regular ``freq`` time index per pod, aggregate
-    readings falling in each bucket (mean for concentrations), and mark empty
-    buckets as missing. Not implemented yet -- the pipeline currently emits
-    per-reading cleaned data only.
+
+def resample_5min(df: pd.DataFrame, freq: str = "5min") -> pd.DataFrame:
+    """Resample a cleaned location/param frame onto a regular time grid.
+
+    Expects the output of :func:`clean_readings` for a single pod: a frame with a
+    ``reading_datestamp`` column and one column per pollutant. Numeric measurement
+    columns are averaged within each ``freq`` bucket (the bucket value is the
+    **mean** of the readings it contains, ignoring missing values), and buckets
+    that contain no readings become ``NaN`` -- there is no forward-fill. Buckets
+    are aligned to wall-clock marks (00:00, 00:05, ... for the default 5-minute
+    grid).
+
+    The per-reading identifier (``reading_number``) and any non-numeric
+    passthrough (e.g. ``reading_status``) are dropped, since neither can be
+    meaningfully averaged. ``location_number`` and ``pod_serial_number`` are
+    constant within the frame and are preserved as leading columns.
+
+    Args:
+        df: Cleaned readings for one location/param, as returned by
+            :func:`clean_readings`.
+        freq: A pandas offset alias for the bucket width (default ``"5min"``).
+
+    Returns:
+        A frame with one row per ``freq`` bucket from the first to the last
+        reading, carrying the averaged measurement columns. Empty in -> empty out.
     """
-    raise NotImplementedError(
-        "5-minute resampling is deferred; see the project plan. "
-        "Cleaned per-reading data is produced by clean_readings()."
-    )
+    if df.empty:
+        return df
+
+    identity = {col: df[col].iloc[0] for col in _IDENTITY_COLS if col in df.columns}
+    indexed = df.set_index("reading_datestamp").sort_index()
+
+    skip = set(_IDENTITY_COLS) | {"reading_number"}
+    value_cols = [
+        col
+        for col in indexed.columns
+        if col not in skip and pd.api.types.is_numeric_dtype(indexed[col])
+    ]
+    resampled = indexed[value_cols].resample(freq).mean()
+
+    for offset, (col, value) in enumerate(identity.items()):
+        resampled.insert(offset, col, value)
+    return resampled.reset_index()
