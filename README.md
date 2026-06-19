@@ -1,4 +1,4 @@
-[![CI](https://github.com/rcgsheffield/aqmesh/actions/workflows/ci.yml/badge.svg)](https://github.com/rcgsheffield/aqmesh/actions/workflows/ci.yml)
+[![Python CI](https://github.com/rcgsheffield/aqmesh/actions/workflows/python-ci.yml/badge.svg)](https://github.com/rcgsheffield/aqmesh/actions/workflows/python-ci.yml)
 
 # AQMesh Data Pipeline
 
