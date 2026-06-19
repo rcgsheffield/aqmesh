@@ -1,0 +1,37 @@
+name: Release to ORDA
+
+# Archive each published GitHub Release in ORDA (the University of Sheffield's
+# institutional repository), which mints/versions a DataCite DOI so the pipeline
+# can be cited in papers. See docs/publish.md for the one-time setup.
+#
+# This job is gated on the FIGSHARE_ARTICLE_ID repository variable, so it stays
+# dormant (and never fails) until that variable and the FIGSHARE_TOKEN secret are
+# configured in the repo settings.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    if: vars.FIGSHARE_ARTICLE_ID != ''
+    runs-on: ubuntu-latest
+    env:
+      ARCHIVE_NAME: ${{ github.event.repository.name }}-${{ github.event.release.tag_name }}
+    steps:
+      - name: Download release archives
+        run: |
+          mkdir data
+          curl -sL "${{ github.event.release.zipball_url }}" > "data/${ARCHIVE_NAME}.zip"
+          curl -sL "${{ github.event.release.tarball_url }}" > "data/${ARCHIVE_NAME}.tar.gz"
+
+      - name: Upload to ORDA (Figshare)
+        uses: figshare/github-upload-action@v1.1
+        with:
+          FIGSHARE_TOKEN: ${{ secrets.FIGSHARE_TOKEN }}
+          FIGSHARE_ENDPOINT: 'https://api.figshare.com/v2'
+          FIGSHARE_ARTICLE_ID: ${{ vars.FIGSHARE_ARTICLE_ID }}
+          DATA_DIR: 'data'

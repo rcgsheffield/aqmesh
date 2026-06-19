@@ -10,6 +10,7 @@ pipeline does and how to run it locally, start with the [project README](../READ
 | [`system-requirements.md`](system-requirements.md) | VM sizing — CPU, RAM, root disk, and the separately mounted data volume — and how the append-only data store grows. |
 | [`service-management.md`](service-management.md) | Day-to-day service control — `systemctl` and `journalctl` commands, health checks, Prefect web UI access, schedule management, credential rotation, and common failure scenarios. |
 | [`troubleshooting.md`](troubleshooting.md) | Operational issues seen in production and how to deal with them (e.g. SQLite `database is locked`). |
+| [`publish.md`](publish.md) | Publishing a citable release — archiving each GitHub Release in **ORDA** (Sheffield's institutional repository) to mint a **DOI**, and the one-time token/variable setup. |
 
 ## New engineer: suggested reading order
 

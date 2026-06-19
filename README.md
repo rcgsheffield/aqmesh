@@ -53,6 +53,16 @@ sudo APP_DIR=/opt/aqmesh DATA_ROOT=/mnt/aqmesh-data bash deploy/bootstrap.sh
 
 See **[docs/deployment.md](docs/deployment.md)** for the full deployment and verification guide.
 
+## Citation
+
+If you use this software in research, please cite it. Citation metadata lives in
+[CITATION.cff](CITATION.cff) (GitHub shows a "Cite this repository" button from it).
+
+Releases are archived in [ORDA](https://orda.shef.ac.uk), the University of
+Sheffield's institutional repository, which mints a DOI per version. See
+[docs/publish.md](docs/publish.md) for how that works. A DOI badge will be added
+here once the first release is deposited.
+
 ## Generative AI usage
 
 Parts of this repository were written with AI assistance under human direction. See
