@@ -18,14 +18,14 @@ hourly spike, not a constant load.
 
 ## Recommended specification
 
-**1 vCPU · 4 GB RAM · 20 GB root disk · separate data volume on `/mnt/aqmesh-data`**, Ubuntu 24.04.
+**1 vCPU · 4 GB RAM · 20 GB root disk · separate data volume on `/mnt/aqmesh`**, Ubuntu 24.04.
 
 | Resource | Recommendation | Rationale |
 | --- | --- | --- |
 | **CPU** | 1 vCPU | The pipeline is single-threaded and I/O-bound (API polling + disk writes); there is no parallelism in the code. |
 | **RAM** | 4 GB | The Prefect 3 server is the surprise cost: it sits at roughly several hundred MB idle, plus the worker, plus the hourly pandas subprocess. 2 GB can work but leaves little headroom and risks OOM as data-per-location grows. 4 GB is the comfortable spot. |
 | **Root disk** | 20 GB | Enough for the OS, application code, and the `uv`-managed virtualenv. The pipeline data does **not** live here. |
-| **Data volume** | Sized to retention (see below) | A separate volume mounted at `/mnt/aqmesh-data`; this is where unbounded growth happens. |
+| **Data volume** | Sized to retention (see below) | A separate volume mounted at `/mnt/aqmesh`; this is where unbounded growth happens. |
 | **Network** | Outbound HTTPS only | To `api.aqmeshdata.net` (the AQMesh API) and `astral.sh` (uv install). No inbound exposure — the server binds to localhost. |
 
 The University default Ubuntu box (1 core / 2 GB / 20 GB) is *almost* right — bump the RAM to 4 GB.
@@ -34,7 +34,7 @@ practice, you could drop back to a 2 GB box, but don't start there.
 
 ## Data volume sizing
 
-The growth is on the **data volume** (`/mnt/aqmesh-data`), not the root disk, and it is effectively
+The growth is on the **data volume** (`/mnt/aqmesh`), not the root disk, and it is effectively
 unbounded:
 
 - `raw/` is **append-only and never pruned** — exact API JSON payloads, one file per pull-batch per

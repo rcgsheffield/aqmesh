@@ -20,7 +20,7 @@ For background on running Prefect from the CLI, see the upstream guide:
 - Outbound HTTPS access to:
   - `astral.sh` — to install [uv](https://docs.astral.sh/uv/) (the dependency manager).
   - `api.aqmeshdata.net` — the AQMesh production API.
-- The **shared storage volume** mounted on the VM (default mount point `/mnt/aqmesh-data`). Cleaned
+- The **shared storage volume** mounted on the VM (default mount point `/mnt/aqmesh`). Cleaned
   CSVs and the append-only raw store are written here.
 - **AQMesh API credentials** (username and password).
 - A **checkout of this repository** on the VM (e.g. `git clone` into your home directory). You run
@@ -43,7 +43,7 @@ For background on running Prefect from the CLI, see the upstream guide:
 From the repository checkout on the VM:
 
 ```bash
-sudo APP_DIR=/opt/aqmesh DATA_ROOT=/mnt/aqmesh-data bash deploy/bootstrap.sh
+sudo APP_DIR=/opt/aqmesh DATA_ROOT=/mnt/aqmesh bash deploy/bootstrap.sh
 ```
 
 The three environment variables are optional overrides (shown with their defaults):
@@ -51,7 +51,7 @@ The three environment variables are optional overrides (shown with their default
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `APP_DIR` | `/opt/aqmesh` | Where the application code is installed. |
-| `DATA_ROOT` | `/mnt/aqmesh-data` | The mounted shared storage volume for raw/clean data. |
+| `DATA_ROOT` | `/mnt/aqmesh` | The mounted shared storage volume for raw/clean data. |
 | `SERVICE_USER` | `aqmesh` | The system user the services run as. |
 
 The script is **idempotent** — safe to re-run, which is exactly how you roll out updates (see
@@ -95,6 +95,11 @@ Key variables in `.env` (see [`.env.example`](../.env.example) for the complete 
 | `AQMESH_DATA_ROOT` | Data volume path; set by bootstrap to `DATA_ROOT`. |
 | `AQMESH_ENVIRONMENT` | `test` (apitest.aqmeshdata.net) or `prod` (api.aqmeshdata.net); set to `prod` by bootstrap. |
 
+> [!NOTE]
+> These are your **production** credentials. Do not copy them to a local development
+> environment — use test-environment credentials there instead. See the
+> [README](../README.md#development) for details.
+
 ## Verify the deployment
 
 1. **Both services are running:**
@@ -136,8 +141,8 @@ Key variables in `.env` (see [`.env.example`](../.env.example) for the complete 
    Watch the worker logs, then confirm files appear under the data volume:
 
    ```bash
-   ls /mnt/aqmesh-data/raw/      # append-only raw JSON batches
-   ls /mnt/aqmesh-data/clean/    # cleaned per-location CSVs
+   ls /mnt/aqmesh/raw/      # append-only raw JSON batches
+   ls /mnt/aqmesh/clean/    # cleaned per-location CSVs
    ```
 
 ## Schedule
@@ -153,7 +158,7 @@ Updates use the **same script** as the first install. From the repository checko
 ```bash
 cd ~/aqmesh                                   # your checkout of this repo
 git pull
-sudo APP_DIR=/opt/aqmesh DATA_ROOT=/mnt/aqmesh-data bash deploy/bootstrap.sh
+sudo APP_DIR=/opt/aqmesh DATA_ROOT=/mnt/aqmesh bash deploy/bootstrap.sh
 ```
 
 Because `bootstrap.sh` is idempotent, a re-run only applies the differences:
@@ -170,7 +175,7 @@ What is **preserved** across an update:
 | Preserved | Why |
 | --- | --- |
 | `/opt/aqmesh/.env` (credentials) | Excluded from the `rsync` copy. |
-| `/mnt/aqmesh-data/` (raw + clean data) | On a separate volume; never touched by bootstrap. |
+| `/mnt/aqmesh/` (raw + clean data) | On a separate volume; never touched by bootstrap. |
 | Prefect server database (run history, work pool) | Lives under `PREFECT_HOME`; only migrated, never reset. |
 
 ### In-flight runs
@@ -197,7 +202,7 @@ prior commit (or tag) and re-run the same script:
 ```bash
 cd ~/aqmesh
 git checkout <previous-tag-or-commit>
-sudo APP_DIR=/opt/aqmesh DATA_ROOT=/mnt/aqmesh-data bash deploy/bootstrap.sh
+sudo APP_DIR=/opt/aqmesh DATA_ROOT=/mnt/aqmesh bash deploy/bootstrap.sh
 ```
 
 `uv sync` will roll the dependencies back to that revision's `uv.lock` as well.

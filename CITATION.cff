@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 type: software
-title: "aqmesh"
+title: "AQMesh Data Pipeline"
 abstract: "Air quality data pipeline using the AQMesh Data Platform API."
 authors:
   - given-names: Joe Salvador Thornhill
@@ -9,6 +9,9 @@ authors:
     email: "j.heffer@sheffield.ac.uk"
     affiliation: "University of Sheffield"
     orcid: 'https://orcid.org/0000-0001-8733-1117'
+identifiers:
+  - type: doi
+    value: 10.15131/shef.data.32743494
 repository-code: "https://github.com/rcgsheffield/aqmesh/"
 url: "https://github.com/rcgsheffield/aqmesh/"
 license: "MIT"

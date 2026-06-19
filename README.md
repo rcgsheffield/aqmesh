@@ -42,6 +42,12 @@ uv run aqmesh clean           # rebuild CSVs from the raw store
 uv run aqmesh pipeline        # ingest + clean (default)
 ```
 
+> [!WARNING]
+> Always use **test credentials** (`AQMESH_ENVIRONMENT=test`) when running the pipeline
+> locally. The AQMesh API advances the data cursor server-side on every successful
+> request; running with production credentials during local development will modify
+> production state and may cause the live pipeline to skip data.
+
 Configuration is environment-driven (see `.env.example`); set `AQMESH_ENVIRONMENT=test` to target
 `apitest.aqmeshdata.net` or `prod` for `api.aqmeshdata.net`.
 
@@ -50,7 +56,7 @@ Configuration is environment-driven (see `.env.example`); set `AQMESH_ENVIRONMEN
 Self-hosted Prefect server + worker, managed by systemd. From a checkout on the VM:
 
 ```bash
-sudo APP_DIR=/opt/aqmesh DATA_ROOT=/mnt/aqmesh-data bash deploy/bootstrap.sh
+sudo APP_DIR=/opt/aqmesh DATA_ROOT=/mnt/aqmesh bash deploy/bootstrap.sh
 ```
 
 See **[docs/deployment.md](docs/deployment.md)** for the full deployment and verification guide.
