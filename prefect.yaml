@@ -11,7 +11,7 @@ pull: null
 
 deployments:
   - name: hourly
-    entrypoint: src/aqmesh_pipeline/flows/pipeline.py:pipeline
+    entrypoint: aqmesh_pipeline.flows.pipeline:pipeline
     description: Download all AQMesh raw data and produce cleaned CSVs.
     work_pool:
       name: aqmesh-pool
