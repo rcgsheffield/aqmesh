@@ -25,39 +25,14 @@ Pre-commit hooks keep `uv.lock` in sync — install once with `pre-commit instal
 
 ## Architecture
 
-The pipeline has two stages: **ingest** (download) and **clean** (transform). They run independently or together via the parent `pipeline` flow.
+Two-stage pipeline: **ingest** (download from the AQMesh API → `data/raw/`) and **clean** (transform → `data/clean/`), run independently or together via the parent `pipeline` flow. Each (location, param) pair is a separate Prefect task.
 
-```
-AQMesh API ──► client.py ──► flows/ingest.py ──► data/raw/
-                                                       │
-                                                       ▼
-                                          flows/clean.py ──► data/clean/
-```
-
-**Key design constraints:**
+Non-obvious invariants:
 - Raw files are **append-only and never modified**. The clean step always rebuilds from scratch.
-- State is tracked at two levels: the **AQMesh server-side cursor** (primary — the API's `/LocationData/Next` endpoint advances a per-(location, param) pointer on the server) and **`data/state/pointers.json`** (local audit trail only — not used to filter API requests).
+- The **AQMesh server-side cursor** is the primary state — the `/LocationData/Next` endpoint advances a per-(location, param) pointer on the server. `data/state/pointers.json` is a local audit trail only, not used to filter requests.
 - Interrupted runs are safe: the server cursor only advances on a successful API call, so the next run retries failed pairs automatically.
 
-**Module responsibilities:**
-- `config.py` — Pydantic settings with `AQMESH_` env prefix; `get_settings()` is called at runtime (not module-level) so tests can set env vars before construction.
-- `client.py` — bearer-token auth with auto-refresh; `get_assets()` for pod listing; `iter_location_data()` generator for cursor-based batched fetches.
-- `models.py` — `Param` enum (`gas`/`particle`), `Asset` dataclass, sentinel constants.
-- `storage.py` — raw JSON batch I/O, CSV writes, atomic pointer updates (write-then-rename).
-- `transform.py` — deduplication by reading number, sentinel → NaN, calibration (`prescaled × slope + offset`). `resample_5min` is scaffolded but not yet implemented.
-- `flows/ingest.py` — Prefect flow; each (location, param) pair is a separate task with 3 retries.
-- `flows/clean.py` — Prefect flow; reads all raw files per location, deduplicates, cleans, writes per-param CSVs.
-- `flows/pipeline.py` — parent flow registered as `aqmesh-pipeline/hourly`; runs ingest then clean.
-- `cli.py` — entry point for the `aqmesh` command.
-
-## Data layout
-
-```
-data/
-  raw/location=<n>/param={gas,particle}/<pulled_at>_<seq>.json
-  clean/location=<n>/aqmesh_<n>_{gas,particle}.csv
-  state/pointers.json
-```
+Module map, data layout, and infrastructure detail: **docs/architecture.md**. Scheduling, state, and backfill: **docs/pipeline.md**.
 
 ## Testing notes
 
@@ -65,10 +40,10 @@ Tests use Prefect's in-process ephemeral mode (configured in `conftest.py`) — 
 
 ## Production
 
-Deployed as two systemd services (`prefect-server`, `prefect-worker`) on an Ubuntu 24.04 VPS. The schedule is `6 * * * *` (Europe/London) — the :06 offset gives the API time to receive pod transmissions that occur on the hour. Deploy and update via:
+Deployed as two systemd services (`prefect-server`, `prefect-worker`) on Ubuntu 24.04, scheduled `6 * * * *` (Europe/London). Deploy/update:
 
 ```bash
 sudo APP_DIR=/opt/aqmesh DATA_ROOT=/mnt/aqmesh-data bash deploy/bootstrap.sh
 ```
 
-See `docs/` for deployment, service management, troubleshooting, and backfill instructions.
+See **docs/** for deployment, service management, troubleshooting, and backfill.
