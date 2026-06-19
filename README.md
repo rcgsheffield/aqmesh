@@ -40,6 +40,11 @@ uv run pytest                 # tests
 uv run aqmesh ingest          # download raw data only
 uv run aqmesh clean           # rebuild CSVs from the raw store
 uv run aqmesh pipeline        # ingest + clean (default)
+
+# Read-only diagnostics (make no changes):
+uv run aqmesh check           # auth + list pods + server freshness/notices
+uv run aqmesh ping            # server health & data freshness (no credentials needed)
+uv run aqmesh sensors         # fleet sensor age/expiry/failures
 ```
 
 > [!WARNING]

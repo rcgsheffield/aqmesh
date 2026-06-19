@@ -18,7 +18,7 @@ from collections.abc import Iterator
 import httpx
 
 from .config import Settings
-from .models import Asset, Param
+from .models import Asset, FailedSensor, Param, SensorDetail, ServerPing
 
 logger = logging.getLogger(__name__)
 
@@ -90,20 +90,29 @@ class AQMeshClient:
         return token
 
     # -- core request with retry + re-auth -------------------------------
-    def _get(self, path: str) -> httpx.Response:
-        """GET ``path`` with bearer auth, retrying transient errors once-re-authing on 401."""
+    def _get(self, path: str, *, authenticated: bool = True) -> httpx.Response:
+        """GET ``path``, retrying transient errors and (when authenticated) re-authing on 401.
+
+        Args:
+            path: API path relative to the base URL.
+            authenticated: Send a bearer token and refresh it once on 401. Set False
+                for public endpoints such as ``/serverping`` (manual 4.16) so the call
+                still works when credentials are absent or expired.
+        """
         last_exc: Exception | None = None
         reauthed = False
         for attempt in range(self._settings.max_retries + 1):
-            token = self.authenticate()
+            headers = {}
+            if authenticated:
+                headers["Authorization"] = f"Bearer {self.authenticate()}"
             try:
-                resp = self._client.get(path, headers={"Authorization": f"Bearer {token}"})
+                resp = self._client.get(path, headers=headers)
             except httpx.TransportError as exc:  # network/timeout
                 last_exc = exc
                 self._sleep_backoff(attempt)
                 continue
 
-            if resp.status_code == httpx.codes.UNAUTHORIZED and not reauthed:
+            if authenticated and resp.status_code == httpx.codes.UNAUTHORIZED and not reauthed:
                 # Token may have expired server-side; force one refresh and retry.
                 reauthed = True
                 self.authenticate(force=True)
@@ -135,6 +144,45 @@ class AQMeshClient:
         """Return all pods/locations available to the authenticated user."""
         resp = self._get("/Pods/Assets_V1")
         return [Asset.model_validate(item) for item in resp.json()]
+
+    # -- diagnostics / context (read-only) -------------------------------
+    def server_ping(self) -> ServerPing:
+        """Return the server health snapshot (manual 4.16).
+
+        Requires no authentication, so it works as a liveness probe even when
+        credentials are missing or expired.
+        """
+        resp = self._get("/serverping", authenticated=False)
+        return ServerPing.model_validate(resp.json())
+
+    def get_system_notifications(self) -> list[str]:
+        """Return operator notices, e.g. planned downtime announcements (manual 4.17)."""
+        resp = self._get("/notification/system")
+        if resp.status_code == httpx.codes.NO_CONTENT or not resp.content:
+            return []
+        return [
+            item["system_information"] for item in resp.json() if item.get("system_information")
+        ]
+
+    def get_failed_sensors(self) -> list[FailedSensor]:
+        """Return sensors that have tripped their fail criteria (manual 4.8)."""
+        resp = self._get("/Pods/SensorFail")
+        if resp.status_code == httpx.codes.NO_CONTENT or not resp.content:
+            return []
+        return [FailedSensor.model_validate(item) for item in resp.json()]
+
+    def get_sensor_details(self, *, active: bool = False) -> list[SensorDetail]:
+        """Return per-sensor status, age, and expiry for deployed pods (manual 4.20).
+
+        Args:
+            active: Restrict to active/installed pods (the manual's ``Active=1``
+                filter). When False (default), include all deployed pods.
+        """
+        # The manual documents a literal double slash before the Active flag.
+        resp = self._get(f"/sensor/SensorDetail//{1 if active else 0}")
+        if resp.status_code == httpx.codes.NO_CONTENT or not resp.content:
+            return []
+        return [SensorDetail.model_validate(item) for item in resp.json()]
 
     def iter_location_data(self, location_number: int, param: Param) -> Iterator[list[dict]]:
         """Yield successive reading batches for a location until the cursor is exhausted.

@@ -69,3 +69,53 @@ class Asset(BaseModel):
     last_particle_reading_number: int | None = None
     location_latitude: float | None = None
     location_longitude: float | None = None
+
+
+class ServerPing(BaseModel):
+    """Server health snapshot from ``/serverping`` (manual 4.16).
+
+    Useful as a liveness/freshness probe: ``most_recent_reading`` tells you how
+    stale the upstream data is before a pipeline run trusts it.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    server_time: str | None = None
+    last_sequence_number: int | None = None
+    most_recent_reading: str | None = None
+    last_communication: str | None = None
+    most_recent_processed: str | None = None
+    version: str | None = None
+
+
+class SensorDetail(BaseModel):
+    """A sensor's status and lifetime, from ``/sensor/SensorDetail`` (manual 4.20).
+
+    ``replacement_needed`` carries a human-readable recommendation string (or null
+    when the sensor is within its expected life), so its truthiness flags sensors
+    worth attention.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    serial_number: int | None = None  # pod serial number
+    sensor_serial_number: str | None = None
+    sensor_type_name: str | None = None
+    sensor_status_name: str | None = None
+    pod_status_name: str | None = None
+    age_in_months: int | None = None
+    expiry_date: str | None = None
+    replacement_needed: str | None = None
+
+
+class FailedSensor(BaseModel):
+    """A sensor that has tripped its fail criteria, from ``/Pods/SensorFail`` (manual 4.8)."""
+
+    model_config = ConfigDict(extra="allow")
+
+    sensor_serial_number: str | int | None = None
+    pod_serial_number: int | None = None
+    sensor_type: str | None = None
+    fail_type: str | None = None
+    fail_date: str | None = None
+    status: str | None = None
