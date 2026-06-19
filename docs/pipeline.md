@@ -28,7 +28,7 @@ unseen batch of readings. The client loops until the server signals no more data
 an empty array):
 
 ```
-# client.py:127-149
+# client.py — iter_location_data
 while True:
     batch = api.get("/LocationData/Next/{location}/{param}/…")
     if not batch:
@@ -97,6 +97,67 @@ To recover batches **older than the last one**, contact EI support to have the s
 pointer reset manually (API manual section 3.3). Data over one year old requires special
 permission to access.
 
+## Triggering historical Prefect runs (Prefect-level backfill)
+
+Prefect 3.x has no `prefect deployment backfill` command. Instead, two mechanisms let you
+create flow runs for historical time windows.
+
+> **Verify before relying on these.** The `/deployments/{id}/schedule` REST payload and the
+> `prefect deployment run --start-at` flag are version-sensitive — confirm both against the
+> Prefect version actually deployed (`prefect version`) before using them, rather than during
+> an incident.
+
+### Option A — REST API (recommended for date ranges)
+
+`POST /deployments/{id}/schedule` accepts `start_time` and `end_time` as ISO 8601 strings.
+Prefect will create `SCHEDULED` runs for every interval in that range based on the
+deployment's cron schedule. The Prefect docs describe this as the intended backfill path:
+
+```bash
+curl -X POST "$PREFECT_API_URL/deployments/$(prefect deployment inspect aqmesh-pipeline/hourly --json | jq -r .id)/schedule" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "start_time": "2024-03-01T00:00:00Z",
+        "end_time":   "2024-03-08T00:00:00Z"
+      }'
+```
+
+This submits one `SCHEDULED` flow run per cron tick in the window. A work pool must be active
+to pick them up.
+
+### Option B — CLI / SDK loop (recommended for individual runs)
+
+```bash
+# single past run
+prefect deployment run aqmesh-pipeline/hourly --start-at "2024-03-01 06:00"
+```
+
+```python
+# Python — loop over historical hours
+from prefect.deployments import run_deployment
+from datetime import datetime, timedelta, timezone
+
+start = datetime(2024, 3, 1, tzinfo=timezone.utc)
+end   = datetime(2024, 3, 8, tzinfo=timezone.utc)
+dt    = start
+while dt < end:
+    run_deployment(
+        name="aqmesh-pipeline/hourly",
+        scheduled_time=dt,
+        idempotency_key=f"backfill-{dt.isoformat()}",  # prevents duplicates on retry
+        timeout=0,   # don't block; fire-and-forget
+    )
+    dt += timedelta(hours=1)
+```
+
+### Important caveat for this pipeline
+
+Triggering historical Prefect runs only re-executes the flow code — it does **not** rewind
+the AQMesh server-side cursor. Because the cursor determines what data the API returns, a
+re-run will fetch whatever data is *currently* next in the queue, not data from the target
+date. A Prefect-level backfill is therefore only meaningful if the AQMesh cursor has been
+reset separately (a manual API operation) to align with the intended historical window.
+
 ## Failure recovery
 
 Each per-(location, param) fetch is a Prefect task with retries:
@@ -122,5 +183,5 @@ preserving the last-known-good position for the next hourly run.
 | Local progress record | `state/pointers.json` — audit trail and failure bookmark |
 | Automatic gap fill | Yes — server cursor accumulates missed batches; next run drains them |
 | Re-fetch last batch | `aqmesh repeat` — calls `/LocationData/Repeat`; does not advance cursor |
-| Explicit date backfill | No — use `aqmesh repeat` for the last batch; older data requires EI admin reset |
+| Explicit date backfill | No date-range flag; `aqmesh repeat` re-fetches the last batch, older data needs an EI admin cursor reset; Prefect-level historical runs are possible via REST / `run_deployment()` but only after that reset |
 | Partial-failure recovery | Prefect task retries (×3); failed pairs skip pointer write; retried next run |

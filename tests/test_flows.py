@@ -95,6 +95,45 @@ def test_ingest_raw_continues_when_gas_fails(
 
 
 @respx.mock
+def test_ingest_raw_skips_404_locations(
+    settings, assets_payload, gas_batch, particle_batch, monkeypatch
+):
+    """Locations returning HTTP 404 must be skipped with status 'not_found', not raise."""
+    # assets_payload has locations 510 and 915; 915 returns 404 (not yet deployed).
+    _allow_prefect()
+    respx.post(f"{settings.base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"token": "tok"})
+    )
+    respx.get(f"{settings.base_url}/Pods/Assets_V1").mock(
+        return_value=httpx.Response(200, json=assets_payload)
+    )
+    for param in (Param.GAS, Param.PARTICLE):
+        respx.get(f"{settings.base_url}/LocationData/Next/510/{int(param)}/01/1").mock(
+            side_effect=[
+                httpx.Response(200, json=gas_batch if param == Param.GAS else particle_batch),
+                httpx.Response(204),
+            ]
+        )
+        respx.get(f"{settings.base_url}/LocationData/Next/915/{int(param)}/01/1").mock(
+            return_value=httpx.Response(404)
+        )
+
+    summary = ingest_raw(settings)
+
+    ok = [s for s in summary["summaries"] if s["status"] == "ok"]
+    not_found = [s for s in summary["summaries"] if s["status"] == "not_found"]
+    assert all(s["location_number"] == 510 for s in ok)
+    assert all(s["location_number"] == 915 for s in not_found)
+    assert len(not_found) == 2  # gas + particle
+
+    pointers = load_pointers(settings)
+    # A 404 location advances no pointer, so it auto-recovers once the pod comes online.
+    assert "915" not in pointers
+    # The healthy location still recorded its progress.
+    assert pointers["510"]["gas"]["new_readings"] == len(gas_batch)
+
+
+@respx.mock
 def test_clean_data_writes_one_csv_per_param(seed_raw):
     _allow_prefect()
     results = clean_data(seed_raw)
