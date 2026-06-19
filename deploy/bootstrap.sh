@@ -8,12 +8,22 @@
 # It is idempotent: safe to re-run after pulling new code.
 set -euo pipefail
 
+export LANG=en_GB.UTF-8
+export LC_ALL=en_GB.UTF-8
+
 APP_DIR="${APP_DIR:-/opt/aqmesh}"
 DATA_ROOT="${DATA_ROOT:-/mnt/aqmesh-data}"   # the mounted shared storage volume
 SERVICE_USER="${SERVICE_USER:-aqmesh}"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 API_READY_TIMEOUT="${API_READY_TIMEOUT:-120}"   # seconds to wait for /api/health
 API_READY_INTERVAL="${API_READY_INTERVAL:-2}"   # seconds between probes
+
+echo ">> Configuring locale (en_GB.UTF-8)"
+# Prefect's rich console prints Unicode characters; a missing or latin-1 locale causes
+# UnicodeEncodeError. Install locales, generate en_GB.UTF-8, and record it system-wide.
+DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends locales >/dev/null
+locale-gen en_GB.UTF-8
+update-locale LANG=en_GB.UTF-8 LC_ALL=en_GB.UTF-8
 
 echo ">> Creating service user '${SERVICE_USER}'"
 id -u "${SERVICE_USER}" >/dev/null 2>&1 || useradd --system --create-home --shell /usr/sbin/nologin "${SERVICE_USER}"
@@ -88,7 +98,7 @@ echo ">> Prefect API is ready"
 
 echo ">> Creating work pool and deploying the flow"
 sudo -u "${SERVICE_USER}" bash -lc "cd '${APP_DIR}' && \
-    export PREFECT_API_URL=http://127.0.0.1:4200/api PREFECT_HOME='${APP_DIR}/.prefect' && \
+    export PREFECT_API_URL=http://127.0.0.1:4200/api PREFECT_HOME='${APP_DIR}/.prefect' LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 && \
     uv run prefect work-pool create --type process --overwrite aqmesh-pool && \
     uv run prefect --no-prompt deploy --all"
 
