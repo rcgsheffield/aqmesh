@@ -7,27 +7,22 @@ Outdoor air quality sensors data pipeline for the [AQMesh](https://www.aqmesh.co
 It downloads all raw readings from the AQMesh API to a shared storage volume and cleans them into
 research-ready CSV. Orchestrated with [Prefect 3](https://docs.prefect.io/v3/get-started).
 
-## How it works
-
-1. **Ingest** (`aqmesh-ingest-raw`): authenticate, list pods via `/Pods/Assets_V1`, then for each
-   location loop the cursor-style `/LocationData/Next/...` endpoint until exhausted. Each batch is
-   written to the raw store immediately (append-only) so an interruption never loses data.
-2. **Clean** (`aqmesh-clean`): read all raw readings per location (deduping rebased values by reading
-   number), convert fault/redaction sentinels (`-999`, `-1000`, …) to missing, apply calibration
-   (`value = prescaled × slope + offset`), and write one CSV per location/param.
-
-The parent flow `aqmesh-pipeline` runs ingest then clean, scheduled hourly.
-
-### Data layout (under `AQMESH_DATA_ROOT`)
-
 ```
-raw/   location=<n>/param=<gas|particle>/<pulled_at>_<seq>.json   # exact API payloads, append-only
-clean/ location=<n>/aqmesh_<n>_<param>.csv                        # scaled, sentinels blanked
-state/ pointers.json                                              # progress per location/param
+AQMesh API ──► client.py ──► flows/ingest.py ──► raw/   (append-only JSON)
+                                                      │
+                                                      ▼
+                                         flows/clean.py ──► clean/ (calibrated CSVs)
+
+Scheduled hourly at :06 (Europe/London) by Prefect 3
+CLI: aqmesh pipeline | ingest | clean | check
 ```
 
-> **Note:** 5-minute time-bucket resampling is scaffolded but not yet implemented
-> (`transform.resample_5min`). The pipeline currently produces cleaned per-reading data.
+## Documentation
+
+| | |
+| --- | --- |
+| **[docs/](docs/README.md)** | Operator index — deployment, service management, troubleshooting |
+| **[docs/architecture.md](docs/architecture.md)** | System internals — modules, infrastructure, data layout |
 
 ## Development
 
