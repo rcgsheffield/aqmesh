@@ -1,3 +1,3 @@
 """AQMesh data pipeline: download raw air-quality data and clean it for researchers."""
 
-__version__ = "0.1.1"  # x-release-please-version
+__version__ = "0.1.2"  # x-release-please-version
