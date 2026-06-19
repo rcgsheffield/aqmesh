@@ -46,6 +46,20 @@ def ingest_location_param(
                 if ds and (last_datestamp is None or ds > last_datestamp):
                     last_datestamp = ds
     except httpx.HTTPError as exc:
+        if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 404:
+            logger.warning(
+                "Location %s %s: not found (HTTP 404) — pod may not be deployed yet.",
+                location_number,
+                param.label,
+            )
+            return {
+                "location_number": location_number,
+                "param": param.label,
+                "new_readings": 0,
+                "last_reading_number": None,
+                "last_datestamp": None,
+                "status": "not_found",
+            }
         # The vendor API returns a persistent 500 for some params (issue #9). The
         # client has already exhausted its retries, so isolate this param's failure
         # here: log it and return a "failed" summary rather than letting it abort the
@@ -95,15 +109,6 @@ def ingest_raw(settings: Settings | None = None) -> dict:
         logger.info("Discovered %d locations.", len(assets))
         if not assets:
             logger.warning("No locations returned by the API — check environment/credentials.")
-        if settings.skip_locations:
-            skipped = [a for a in assets if a.location_number in settings.skip_locations]
-            if skipped:
-                logger.warning(
-                    "Skipping %d location(s) per AQMESH_SKIP_LOCATIONS: %s",
-                    len(skipped),
-                    ", ".join(str(a.location_number) for a in skipped),
-                )
-            assets = [a for a in assets if a.location_number not in settings.skip_locations]
         for asset in assets:
             for param in (Param.GAS, Param.PARTICLE):
                 summary = ingest_location_param(
@@ -125,6 +130,13 @@ def ingest_raw(settings: Settings | None = None) -> dict:
     save_pointers(settings, pointers)
     total_new = sum(s["new_readings"] for s in summaries)
     failed = [s for s in summaries if s["status"] == "failed"]
+    not_found = [s for s in summaries if s["status"] == "not_found"]
+    if not_found:
+        logger.warning(
+            "%d location/param(s) not found (HTTP 404): %s",
+            len(not_found),
+            ", ".join(f"{s['location_number']}/{s['param']}" for s in not_found),
+        )
     if failed:
         logger.warning(
             "%d location/param fetch(es) failed: %s",
