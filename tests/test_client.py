@@ -168,3 +168,70 @@ def test_get_raises_after_exhausting_retries(settings, _no_backoff_sleep):
     # settings.max_retries == 2 -> 3 attempts, all 500, then the last error is raised.
     with AQMeshClient(settings) as client, pytest.raises(httpx.HTTPStatusError):
         client.get_assets()
+
+
+# -- repeat_last -------------------------------------------------------------
+
+
+@respx.mock
+def test_repeat_last_gas_calls_correct_path(settings, gas_batch):
+    respx.post(f"{settings.base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"token": "tok"})
+    )
+    route = respx.get(url__regex=rf"{settings.base_url}/LocationData/Repeat/.*").mock(
+        return_value=httpx.Response(200, json=gas_batch)
+    )
+    with AQMeshClient(settings) as client:
+        result = client.repeat_last(510, Param.GAS)
+
+    assert result == gas_batch
+    path = route.calls.last.request.url.path
+    segments = path.split("/LocationData/Repeat/")[1].split("/")
+    # location / param / units  (no TPC, no version when version=0)
+    assert segments == ["510", "1", "01"]
+
+
+@respx.mock
+def test_repeat_last_particle_uses_int_2(settings, particle_batch):
+    respx.post(f"{settings.base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"token": "tok"})
+    )
+    route = respx.get(url__regex=rf"{settings.base_url}/LocationData/Repeat/.*").mock(
+        return_value=httpx.Response(200, json=particle_batch)
+    )
+    with AQMeshClient(settings) as client:
+        client.repeat_last(510, Param.PARTICLE)
+
+    path = route.calls.last.request.url.path
+    segments = path.split("/LocationData/Repeat/")[1].split("/")
+    assert segments[1] == "2"
+
+
+@respx.mock
+def test_repeat_last_returns_empty_on_204(settings):
+    respx.post(f"{settings.base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"token": "tok"})
+    )
+    respx.get(url__regex=rf"{settings.base_url}/LocationData/Repeat/.*").mock(
+        return_value=httpx.Response(204)
+    )
+    with AQMeshClient(settings) as client:
+        result = client.repeat_last(510, Param.GAS)
+    assert result == []
+
+
+@respx.mock
+def test_repeat_last_appends_non_default_version(settings, gas_batch):
+    settings = settings.model_copy(update={"version": 2})
+    respx.post(f"{settings.base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"token": "tok"})
+    )
+    route = respx.get(url__regex=rf"{settings.base_url}/LocationData/Repeat/.*").mock(
+        return_value=httpx.Response(200, json=gas_batch)
+    )
+    with AQMeshClient(settings) as client:
+        client.repeat_last(510, Param.GAS)
+
+    path = route.calls.last.request.url.path
+    segments = path.split("/LocationData/Repeat/")[1].split("/")
+    assert segments == ["510", "1", "01", "2"]

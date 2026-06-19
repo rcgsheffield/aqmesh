@@ -2,17 +2,20 @@
 
 Usage::
 
-    aqmesh pipeline   # ingest + clean (default)
-    aqmesh ingest     # download raw data only
-    aqmesh clean      # rebuild cleaned CSVs from the raw store
-    aqmesh check      # smoke-test: authenticate and list pods (no writes)
+    aqmesh pipeline      # ingest + clean (default)
+    aqmesh ingest        # download raw data only
+    aqmesh clean         # rebuild cleaned CSVs from the raw store
+    aqmesh check         # smoke-test: authenticate and list pods (no writes)
+    aqmesh repeat-last   # re-ingest the last delivered batch (does not advance cursor)
 """
 
 from __future__ import annotations
 
 import argparse
 import logging
+import sys
 from collections.abc import Sequence
+from datetime import UTC, datetime
 
 import httpx
 from pydantic import ValidationError
@@ -22,6 +25,8 @@ from .config import Settings, get_settings
 from .flows.clean import clean_data
 from .flows.ingest import ingest_raw
 from .flows.pipeline import pipeline
+from .models import Param
+from .storage import write_raw_batch
 
 
 def check(settings: Settings | None = None) -> None:
@@ -64,6 +69,157 @@ def check(settings: Settings | None = None) -> None:
         print(f"  ... and {len(assets) - 10} more.")
 
 
+def _repeat_last_cmd(argv: Sequence[str], settings: Settings | None = None) -> None:
+    """Parse repeat-last arguments and re-ingest the last delivered batch(es)."""
+    parser = argparse.ArgumentParser(
+        prog="aqmesh repeat-last",
+        description=(
+            "Re-fetch the most recently delivered reading batch for one or more locations "
+            "using the AQMesh Repeat endpoint (manual 4.11). "
+            "The server-side cursor is NOT advanced — use 'aqmesh ingest' for normal polling."
+        ),
+    )
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        "--location",
+        type=int,
+        metavar="LOC",
+        help="Location number to re-fetch.",
+    )
+    group.add_argument(
+        "--all",
+        action="store_true",
+        help="Re-fetch the last batch for every location/param pair (requires --yes).",
+    )
+    parser.add_argument(
+        "--param",
+        choices=["gas", "particle"],
+        help="Which param to re-fetch. Omit to re-fetch both (only valid with --location).",
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Skip confirmation prompt.",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be re-fetched without making any API calls.",
+    )
+    args = parser.parse_args(argv)
+
+    if args.all and args.param:
+        parser.error("--param cannot be combined with --all.")
+
+    if settings is None:
+        try:
+            settings = get_settings()
+        except ValidationError as exc:
+            print(
+                "Missing or invalid credentials — set AQMESH_USERNAME and "
+                f"AQMESH_PASSWORD (see .env.example).\n{exc}"
+            )
+            raise SystemExit(1) from exc
+
+    env_label = f"[{settings.environment.upper()}]"
+
+    # For --location, we know the pairs without an API call.
+    # For --all, we defer get_assets() until after confirmation so dry-run
+    # and abort paths never touch the network.
+    if not args.all:
+        params: list[Param]
+        if args.param == "gas":
+            params = [Param.GAS]
+        elif args.param == "particle":
+            params = [Param.PARTICLE]
+        else:
+            params = list(Param)
+        pairs: list[tuple[int, Param]] = [(args.location, p) for p in params]
+
+        print(f"Will re-fetch last batch for {len(pairs)} cursor(s) {env_label}:")
+        for location_number, param in pairs:
+            print(f"  location {location_number}  {param.label}")
+
+        if args.dry_run:
+            print("Dry run — no API calls made.")
+            return
+
+        if settings.environment == "prod" and not args.yes:
+            answer = input(
+                f"You are targeting the PRODUCTION environment ({settings.base_url}). "
+                "Proceed? [y/N] "
+            )
+            if answer.strip().lower() != "y":
+                print("Aborted.")
+                raise SystemExit(1)
+    else:
+        # --all: confirm before making any API calls.
+        print(f"Will re-fetch last batch for ALL locations {env_label}.")
+
+        if args.dry_run:
+            print("Dry run — no API calls made.")
+            return
+
+        if not args.yes:
+            answer = input(
+                f"Re-fetch last batch for ALL locations {env_label}? "
+                "This will write new raw files. Type YES to confirm: "
+            )
+            if answer.strip() != "YES":
+                print("Aborted.")
+                raise SystemExit(1)
+
+    pulled_at = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    failures: list[tuple[int, Param, Exception]] = []
+
+    with AQMeshClient(settings) as client:
+        try:
+            client.authenticate()
+        except AQMeshAuthError as exc:
+            print(f"Authentication failed: {exc}")
+            raise SystemExit(1) from exc
+
+        if args.all:
+            # Resolve pairs now that we have an authenticated client.
+            assets = client.get_assets()
+            pairs = [(asset.location_number, p) for asset in assets for p in Param]
+            if not pairs:
+                print("No locations found.")
+                return
+
+        for seq, (location_number, param) in enumerate(pairs):
+            try:
+                batch = client.repeat_last(location_number, param)
+                if batch:
+                    write_raw_batch(
+                        settings,
+                        location_number,
+                        param,
+                        batch,
+                        pulled_at=pulled_at,
+                        seq=seq,
+                    )
+                    print(
+                        f"  location {location_number} {param.label}: "
+                        f"re-fetched {len(batch)} reading(s)"
+                    )
+                else:
+                    print(
+                        f"  location {location_number} {param.label}: "
+                        "no data (server returned empty — no previous batch?)"
+                    )
+            except Exception as exc:  # noqa: BLE001
+                failures.append((location_number, param, exc))
+                print(f"  location {location_number} {param.label}: FAILED — {exc}")
+
+    if failures:
+        print(f"\n{len(failures)} re-fetch(es) failed.")
+        raise SystemExit(1)
+
+    print(f"\nDone. {len(pairs)} batch(es) re-fetched.")
+    print("Re-run 'aqmesh clean' to rebuild the cleaned CSVs from the updated raw store.")
+
+
 _COMMANDS = {
     "pipeline": pipeline,
     "ingest": ingest_raw,
@@ -73,6 +229,15 @@ _COMMANDS = {
 
 
 def main(argv: Sequence[str] | None = None) -> None:
+    argv_list = list(argv) if argv is not None else sys.argv[1:]
+
+    if argv_list and argv_list[0] == "repeat-last":
+        logging.basicConfig(
+            level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
+        )
+        _repeat_last_cmd(argv_list[1:])
+        return
+
     parser = argparse.ArgumentParser(prog="aqmesh", description="AQMesh data pipeline.")
     parser.add_argument(
         "command",
@@ -81,7 +246,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         choices=_COMMANDS.keys(),
         help="Which flow to run (default: pipeline).",
     )
-    args = parser.parse_args(argv)
+    args = parser.parse_args(argv_list)
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
     )
