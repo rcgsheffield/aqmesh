@@ -1,0 +1,46 @@
+# Frictionless Data descriptor for the AQMesh raw data store.
+# See https://specs.frictionlessdata.io/data-package/
+name: aqmesh-raw
+title: AQMesh raw air-quality readings
+description: >
+  Append-only JSON batches from the AQMesh Data Platform API, one file per
+  pull, partitioned by location and parameter type. Each file is a JSON array
+  of reading objects. Raw files are never modified after writing; cleaning and
+  calibration happen downstream in the pipeline.
+
+  Calibration formula: calibrated_value = prescale × slope + offset.
+  Sentinel values in the raw data indicate unusable channels and are converted
+  to NaN during cleaning (gas sentinels: -1000 through -991; particle
+  sentinels: -1000, -893, -892).
+version: "0.1.4"
+licenses:
+  - name: OGL-UK-3.0
+    title: Open Government Licence 3.0
+    path: https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
+contributors:
+  - title: Joe Heffer
+    email: j.heffer@sheffield.ac.uk
+    organization: University of Sheffield
+    role: author
+sources:
+  - title: AQMesh Data Platform API
+    path: https://www.aqmeshdata.net/
+resources:
+  - name: raw-gas
+    title: Raw gas readings
+    description: >
+      Gas-parameter batch files. Path pattern:
+      raw/location=<n>/param=gas/<pulled_at>_<seq>.json
+      where pulled_at is a UTC timestamp in YYYYMMDDTHHMMSSz format and seq is
+      a zero-padded four-digit sequence number within a single pipeline run.
+    mediatype: application/json
+    schema:
+      $ref: schemas/raw_gas_reading.json
+  - name: raw-particle
+    title: Raw particle readings
+    description: >
+      Particle-parameter batch files. Path pattern:
+      raw/location=<n>/param=particle/<pulled_at>_<seq>.json
+    mediatype: application/json
+    schema:
+      $ref: schemas/raw_particle_reading.json
