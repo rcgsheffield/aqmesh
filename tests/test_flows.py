@@ -69,8 +69,8 @@ def test_ingest_raw_continues_when_gas_fails(
     )
     for asset in assets_payload:
         loc = asset["location_number"]
-        gas_url = f"{settings.base_url}/LocationData/Next/{loc}/{int(Param.GAS)}/01/1/0"
-        particle_url = f"{settings.base_url}/LocationData/Next/{loc}/{int(Param.PARTICLE)}/01/1/0"
+        gas_url = f"{settings.base_url}/LocationData/Next/{loc}/{int(Param.GAS)}/01/1"
+        particle_url = f"{settings.base_url}/LocationData/Next/{loc}/{int(Param.PARTICLE)}/01/1"
         respx.get(gas_url).mock(return_value=httpx.Response(500))
         respx.get(particle_url).mock(
             side_effect=[httpx.Response(200, json=particle_batch), httpx.Response(204)]
