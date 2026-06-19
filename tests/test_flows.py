@@ -33,7 +33,7 @@ def _mock_api(base_url, assets_payload, gas_batch, particle_batch):
     for asset in assets_payload:
         loc = asset["location_number"]
         for param, batch in ((Param.GAS, gas_batch), (Param.PARTICLE, particle_batch)):
-            url = f"{base_url}/LocationData/Next/{loc}/{int(param)}/01/1/0"
+            url = f"{base_url}/LocationData/Next/{loc}/{int(param)}/01/1"
             respx.get(url).mock(side_effect=[httpx.Response(200, json=batch), httpx.Response(204)])
 
 
