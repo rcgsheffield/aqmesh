@@ -217,6 +217,46 @@ the **same `APP_DIR` virtualenv**, the client and server are always the same Pre
 avoids the version-skew errors described in the
 [Prefect server concepts guide](https://docs.prefect.io/v3/concepts/server).
 
+## Customising unit files
+
+The shipped unit files (`deploy/systemd/prefect-server.service` and `prefect-worker.service`) are
+version-controlled and **overwritten on every re-deploy**. Do not edit them in-place on the VM —
+any changes will be silently lost the next time `bootstrap.sh` runs.
+
+Use **`systemctl edit`** instead. It creates a drop-in file at
+`/etc/systemd/system/<unit>.service.d/override.conf` that is layered on top of the shipped unit and
+survives re-deployment:
+
+```bash
+sudo systemctl edit prefect-worker
+```
+
+This opens your `$EDITOR` with a blank file (or the existing drop-in). Add only the directives you
+want to change. To add or replace an `Environment=` variable:
+
+```ini
+[Service]
+Environment=MY_CUSTOM_VAR=value
+```
+
+Save and exit, then apply the change:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart prefect-worker
+```
+
+The three configuration tiers and where each lives:
+
+| Config type | Mechanism | Survives re-deploy? |
+| --- | --- | --- |
+| Secrets / credentials | `/opt/aqmesh/.env` (`EnvironmentFile=`) | Yes — excluded from rsync |
+| Shipped defaults / tuning | Inline `Environment=` in the unit files | N/A — these are the shipped defaults |
+| Operator-local overrides | `systemctl edit` drop-in | Yes — outside the rsync target |
+
+Drop-in files are stored under `/etc/systemd/system/`, not in the application directory, so they
+are unaffected by the `rsync` step in `bootstrap.sh`.
+
 ## Scaling note
 
 The Prefect server uses its default SQLite backend, which is sufficient for this single-worker
