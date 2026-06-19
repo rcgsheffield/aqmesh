@@ -10,6 +10,7 @@ pipeline does and how to run it locally, start with the [project README](../READ
 | [`prefect-ui.md`](prefect-ui.md) | The built-in Prefect web UI — what it shows, and how to reach it over an SSH tunnel (the server is bound to localhost). |
 | [`service-management.md`](service-management.md) | Day-to-day service control — `systemctl` and `journalctl` commands, health checks, schedule management, credential rotation, and common failure scenarios. |
 | [`troubleshooting.md`](troubleshooting.md) | Operational issues seen in production and how to deal with them (e.g. SQLite `database is locked`). |
+| [`publish.md`](publish.md) | Publishing a citable release — archiving each GitHub Release in **ORDA** (Sheffield's institutional repository) to mint a **DOI**, and the one-time token/variable setup. |
 
 New to the deployment? Read `system-requirements.md` to size the VM, then follow `deployment.md`
 top to bottom. To ship a change to an already-running VM, jump straight to
