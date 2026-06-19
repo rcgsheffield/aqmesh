@@ -43,7 +43,7 @@ Tests use Prefect's in-process ephemeral mode (configured in `conftest.py`) — 
 Deployed as two systemd services (`prefect-server`, `prefect-worker`) on Ubuntu 24.04, scheduled `6 * * * *` (Europe/London). Deploy/update:
 
 ```bash
-sudo APP_DIR=/opt/aqmesh DATA_ROOT=/mnt/aqmesh-data bash deploy/bootstrap.sh
+sudo APP_DIR=/opt/aqmesh DATA_ROOT=/mnt/aqmesh bash deploy/bootstrap.sh
 ```
 
 See **docs/** for deployment, service management, troubleshooting, and backfill.
