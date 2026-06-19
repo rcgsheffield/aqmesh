@@ -89,7 +89,7 @@ echo ">> Prefect API is ready"
 echo ">> Creating work pool and deploying the flow"
 sudo -u "${SERVICE_USER}" bash -lc "cd '${APP_DIR}' && \
     export PREFECT_API_URL=http://127.0.0.1:4200/api PREFECT_HOME='${APP_DIR}/.prefect' && \
-    uv run prefect work-pool create --type process aqmesh-pool 2>/dev/null || true && \
+    uv run prefect work-pool create --type process --overwrite aqmesh-pool && \
     uv run prefect --no-prompt deploy --all"
 
 # 'restart' so an update reloads the worker (it holds imported flow code and deps in memory).
