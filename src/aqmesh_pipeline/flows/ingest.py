@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 
 import httpx
 from prefect import flow, get_run_logger, task
+from prefect.cache_policies import NO_CACHE
 
 from ..client import AQMeshClient
 from ..config import Settings, get_settings
@@ -19,7 +20,7 @@ from ..models import READING_DATESTAMP_FIELD, Param
 from ..storage import load_pointers, save_pointers, update_pointer, write_raw_batch
 
 
-@task(retries=3, retry_delay_seconds=30)
+@task(retries=3, retry_delay_seconds=30, cache_policy=NO_CACHE)
 def ingest_location_param(
     client: AQMeshClient,
     settings: Settings,
