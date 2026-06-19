@@ -4,6 +4,7 @@
     ".": {
       "release-type": "python",
       "package-name": "aqmesh-pipeline",
+      "include-component-in-tag": false,
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
         { "type": "generic", "path": "src/aqmesh_pipeline/__init__.py" }
