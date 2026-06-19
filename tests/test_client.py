@@ -28,7 +28,7 @@ def test_iter_location_data_stops_on_empty(settings, gas_batch):
     respx.post(f"{settings.base_url}/Authenticate").mock(
         return_value=httpx.Response(200, json={"token": "tok"})
     )
-    url = f"{settings.base_url}/LocationData/Next/510/1/01/1/0"
+    url = f"{settings.base_url}/LocationData/Next/510/1/01/1"
     respx.get(url).mock(
         side_effect=[
             httpx.Response(200, json=gas_batch),
@@ -47,13 +47,49 @@ def test_iter_location_data_stops_on_empty_array(settings, gas_batch):
     respx.post(f"{settings.base_url}/Authenticate").mock(
         return_value=httpx.Response(200, json={"token": "tok"})
     )
-    url = f"{settings.base_url}/LocationData/Next/510/1/01/1/0"
+    url = f"{settings.base_url}/LocationData/Next/510/1/01/1"
     respx.get(url).mock(
         side_effect=[httpx.Response(200, json=gas_batch), httpx.Response(200, json=[])]
     )
     with AQMeshClient(settings) as client:
         batches = list(client.iter_location_data(510, Param.GAS))
     assert len(batches) == 1
+
+
+@respx.mock
+def test_iter_location_data_path_has_four_segments_after_next(settings):
+    """Regression for #8: the route 404s on a trailing /{version}, so the default
+    (version=0) path must have exactly 4 segments after ``Next``."""
+    respx.post(f"{settings.base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"token": "tok"})
+    )
+    route = respx.get(url__regex=rf"{settings.base_url}/LocationData/Next/.*").mock(
+        return_value=httpx.Response(204)
+    )
+    with AQMeshClient(settings) as client:
+        list(client.iter_location_data(510, Param.GAS))
+
+    requested = route.calls.last.request.url.path
+    segments = requested.split("/LocationData/Next/")[1].split("/")
+    assert segments == ["510", "1", "01", "1"]
+
+
+@respx.mock
+def test_iter_location_data_appends_non_default_version(settings):
+    """A non-zero version is appended as the 5th segment (documented but rarely used)."""
+    settings = settings.model_copy(update={"version": 3})
+    respx.post(f"{settings.base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"token": "tok"})
+    )
+    route = respx.get(url__regex=rf"{settings.base_url}/LocationData/Next/.*").mock(
+        return_value=httpx.Response(204)
+    )
+    with AQMeshClient(settings) as client:
+        list(client.iter_location_data(510, Param.GAS))
+
+    requested = route.calls.last.request.url.path
+    segments = requested.split("/LocationData/Next/")[1].split("/")
+    assert segments == ["510", "1", "01", "1", "3"]
 
 
 @respx.mock

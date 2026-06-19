@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     # Reading request defaults (API manual section 4.10).
     units: str = "01"
     tpc: int = 1
+    # The LocationData/Next route rejects a trailing /{version} segment, so the
+    # client omits it when version is 0 (the default). Set non-zero only if a
+    # future endpoint genuinely requires the 5th segment.
     version: int = 0
 
     request_timeout: float = 60.0

@@ -132,9 +132,11 @@ class AQMeshClient:
         """
         s = self._settings
         while True:
-            path = (
-                f"/LocationData/Next/{location_number}/{int(param)}/{s.units}/{s.tpc}/{s.version}"
-            )
+            # The route rejects a trailing /{version} segment (even /0); the manual's
+            # worked examples all use 4 segments, so only append version when non-default.
+            path = f"/LocationData/Next/{location_number}/{int(param)}/{s.units}/{s.tpc}"
+            if s.version:
+                path += f"/{s.version}"
             resp = self._get(path)
             if resp.status_code == httpx.codes.NO_CONTENT or not resp.content:
                 return
