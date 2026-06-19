@@ -223,3 +223,5 @@ The Prefect server uses its default SQLite backend, which is sufficient for this
 `process` pool. Multi-worker setups require PostgreSQL (and Redis) — out of scope here; see the
 [Prefect self-hosted guide](https://docs.prefect.io/v3/how-to-guides/self-hosted/server-cli) if you
 need to scale beyond one worker.
+
+Hitting errors? See [`troubleshooting.md`](troubleshooting.md).

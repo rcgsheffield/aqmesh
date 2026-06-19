@@ -9,6 +9,30 @@ User=aqmesh
 Group=aqmesh
 WorkingDirectory=/opt/aqmesh
 Environment=PREFECT_HOME=/opt/aqmesh/.prefect
+
+# --- SQLite lock-contention mitigations (issue #16) ---
+# The default SQLite backend is single-writer. Prefect already enables WAL +
+# synchronous=NORMAL + a 60s busy_timeout, but a read-then-write transaction that
+# collides with another writer still fails *immediately* with "database is locked"
+# (not subject to busy_timeout). The contention here is between the server's
+# background service loops and ongoing flow/task state writes on one DB file.
+#
+# 1) Cut background write volume: this deployment uses no automations / event feed,
+#    so stop persisting events (also neutralises the heavy event DB-vacuum) and
+#    disable usage telemetry.
+Environment=PREFECT_SERVER_SERVICES_EVENT_PERSISTER_ENABLED=false
+Environment=PREFECT_SERVER_ANALYTICS_ENABLED=false
+# 2) Desynchronise the periodic service loops by giving them mutually COPRIME
+#    intervals (prime seconds) so they almost never fire on the same tick. Do not
+#    "tidy" these back to round numbers — the point is that their LCM is huge.
+#    (defaults were: scheduler 60, foreman 15, cancellation_cleanup 20,
+#     late_runs 5, pause_expirations 5)
+Environment=PREFECT_SERVER_SERVICES_SCHEDULER_LOOP_SECONDS=61
+Environment=PREFECT_SERVER_SERVICES_FOREMAN_LOOP_SECONDS=17
+Environment=PREFECT_SERVER_SERVICES_CANCELLATION_CLEANUP_LOOP_SECONDS=23
+Environment=PREFECT_SERVER_SERVICES_LATE_RUNS_LOOP_SECONDS=7
+Environment=PREFECT_SERVER_SERVICES_PAUSE_EXPIRATIONS_LOOP_SECONDS=11
+
 # Bind to localhost only; the server is not exposed publicly.
 ExecStart=/usr/bin/env uv run prefect server start --host 127.0.0.1 --port 4200
 Restart=on-failure
