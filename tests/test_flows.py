@@ -54,6 +54,47 @@ def test_ingest_raw_writes_data_and_pointers(settings, assets_payload, gas_batch
 
 
 @respx.mock
+def test_ingest_raw_continues_when_gas_fails(
+    settings, assets_payload, particle_batch, gas_batch, monkeypatch
+):
+    """A persistent gas (Param=1) 500 must not abort the run; particle still flows (issue #9)."""
+    # Skip the client's backoff sleeps so the exhausted-retry path is fast.
+    monkeypatch.setattr("aqmesh_pipeline.client.time.sleep", lambda _seconds: None)
+    _allow_prefect()
+    respx.post(f"{settings.base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"token": "tok"})
+    )
+    respx.get(f"{settings.base_url}/Pods/Assets_V1").mock(
+        return_value=httpx.Response(200, json=assets_payload)
+    )
+    for asset in assets_payload:
+        loc = asset["location_number"]
+        gas_url = f"{settings.base_url}/LocationData/Next/{loc}/{int(Param.GAS)}/01/1/0"
+        particle_url = f"{settings.base_url}/LocationData/Next/{loc}/{int(Param.PARTICLE)}/01/1/0"
+        respx.get(gas_url).mock(return_value=httpx.Response(500))
+        respx.get(particle_url).mock(
+            side_effect=[httpx.Response(200, json=particle_batch), httpx.Response(204)]
+        )
+
+    summary = ingest_raw(settings)
+
+    assert summary["locations"] == 2
+    # Particle data flowed for every location despite gas failing.
+    assert list(raw_param_dir(settings, 510, Param.PARTICLE).glob("*.json"))
+    assert list(raw_param_dir(settings, 915, Param.PARTICLE).glob("*.json"))
+    # Gas wrote nothing.
+    assert not list(raw_param_dir(settings, 510, Param.GAS).glob("*.json"))
+
+    pointers = load_pointers(settings)
+    assert pointers["510"]["particle"]["new_readings"] == len(particle_batch)
+    # Failed gas poll left no pointer rather than clobbering it.
+    assert "gas" not in pointers["510"]
+
+    gas_summaries = [s for s in summary["summaries"] if s["param"] == "gas"]
+    assert gas_summaries and all(s["status"] == "failed" for s in gas_summaries)
+
+
+@respx.mock
 def test_clean_data_writes_one_csv_per_param(seed_raw):
     _allow_prefect()
     results = clean_data(seed_raw)

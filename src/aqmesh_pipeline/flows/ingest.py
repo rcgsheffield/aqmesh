@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+import httpx
 from prefect import flow, get_run_logger, task
 
 from ..client import AQMeshClient
@@ -32,16 +33,37 @@ def ingest_location_param(
     last_datestamp: str | None = None
     total = 0
 
-    for seq, batch in enumerate(client.iter_location_data(location_number, param)):
-        write_raw_batch(settings, location_number, param, batch, pulled_at, seq)
-        total += len(batch)
-        for record in batch:
-            rn = record.get(param.reading_number_field)
-            if rn is not None and (max_reading_number is None or rn > max_reading_number):
-                max_reading_number = rn
-            ds = record.get(READING_DATESTAMP_FIELD)
-            if ds and (last_datestamp is None or ds > last_datestamp):
-                last_datestamp = ds
+    try:
+        for seq, batch in enumerate(client.iter_location_data(location_number, param)):
+            write_raw_batch(settings, location_number, param, batch, pulled_at, seq)
+            total += len(batch)
+            for record in batch:
+                rn = record.get(param.reading_number_field)
+                if rn is not None and (max_reading_number is None or rn > max_reading_number):
+                    max_reading_number = rn
+                ds = record.get(READING_DATESTAMP_FIELD)
+                if ds and (last_datestamp is None or ds > last_datestamp):
+                    last_datestamp = ds
+    except httpx.HTTPError as exc:
+        # The vendor API returns a persistent 500 for some params (issue #9). The
+        # client has already exhausted its retries, so isolate this param's failure
+        # here: log it and return a "failed" summary rather than letting it abort the
+        # whole run, so the other params and locations still flow.
+        logger.error(
+            "Location %s %s: fetch failed after retries (%s) -- skipping this param.",
+            location_number,
+            param.label,
+            exc,
+        )
+        return {
+            "location_number": location_number,
+            "param": param.label,
+            "new_readings": total,
+            "last_reading_number": max_reading_number,
+            "last_datestamp": last_datestamp,
+            "status": "failed",
+            "error": str(exc),
+        }
 
     logger.info("Location %s %s: %d new readings.", location_number, param.label, total)
     return {
@@ -50,6 +72,7 @@ def ingest_location_param(
         "new_readings": total,
         "last_reading_number": max_reading_number,
         "last_datestamp": last_datestamp,
+        "status": "ok",
     }
 
 
@@ -71,17 +94,27 @@ def ingest_raw(settings: Settings | None = None) -> dict:
                 summary = ingest_location_param(
                     client, settings, asset.location_number, param, pulled_at
                 )
-                update_pointer(
-                    pointers,
-                    asset.location_number,
-                    param,
-                    last_reading_number=summary["last_reading_number"],
-                    last_datestamp=summary["last_datestamp"],
-                    new_readings=summary["new_readings"],
-                )
                 summaries.append(summary)
+                # Only advance the pointer on success, so a failed poll preserves the
+                # last known-good progress rather than clobbering it.
+                if summary["status"] == "ok":
+                    update_pointer(
+                        pointers,
+                        asset.location_number,
+                        param,
+                        last_reading_number=summary["last_reading_number"],
+                        last_datestamp=summary["last_datestamp"],
+                        new_readings=summary["new_readings"],
+                    )
 
     save_pointers(settings, pointers)
     total_new = sum(s["new_readings"] for s in summaries)
+    failed = [s for s in summaries if s["status"] == "failed"]
+    if failed:
+        logger.warning(
+            "%d location/param fetch(es) failed: %s",
+            len(failed),
+            ", ".join(f"{s['location_number']}/{s['param']}" for s in failed),
+        )
     logger.info("Ingest complete: %d new readings across %d locations.", total_new, len(assets))
     return {"pulled_at": pulled_at, "locations": len(assets), "summaries": summaries}
