@@ -55,9 +55,9 @@ def ingest_location_param(
             return {
                 "location_number": location_number,
                 "param": param.label,
-                "new_readings": 0,
-                "last_reading_number": None,
-                "last_datestamp": None,
+                "new_readings": total,
+                "last_reading_number": max_reading_number,
+                "last_datestamp": last_datestamp,
                 "status": "not_found",
             }
         # The vendor API returns a persistent 500 for some params (issue #9). The

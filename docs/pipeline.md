@@ -28,7 +28,7 @@ unseen batch of readings. The client loops until the server signals no more data
 an empty array):
 
 ```
-# client.py:127-149
+# client.py — iter_location_data
 while True:
     batch = api.get("/LocationData/Next/{location}/{param}/…")
     if not batch:
@@ -84,6 +84,11 @@ API operation outside this codebase.
 
 Prefect 3.x has no `prefect deployment backfill` command. Instead, two mechanisms let you
 create flow runs for historical time windows.
+
+> **Verify before relying on these.** The `/deployments/{id}/schedule` REST payload and the
+> `prefect deployment run --start-at` flag are version-sensitive — confirm both against the
+> Prefect version actually deployed (`prefect version`) before using them, rather than during
+> an incident.
 
 ### Option A — REST API (recommended for date ranges)
 

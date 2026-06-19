@@ -126,6 +126,12 @@ def test_ingest_raw_skips_404_locations(
     assert all(s["location_number"] == 915 for s in not_found)
     assert len(not_found) == 2  # gas + particle
 
+    pointers = load_pointers(settings)
+    # A 404 location advances no pointer, so it auto-recovers once the pod comes online.
+    assert "915" not in pointers
+    # The healthy location still recorded its progress.
+    assert pointers["510"]["gas"]["new_readings"] == len(gas_batch)
+
 
 @respx.mock
 def test_clean_data_writes_one_csv_per_param(seed_raw):
