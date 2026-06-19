@@ -1,5 +1,5 @@
 [![Python CI](https://github.com/rcgsheffield/aqmesh/actions/workflows/python-ci.yml/badge.svg)](https://github.com/rcgsheffield/aqmesh/actions/workflows/python-ci.yml)
-[![DOI](https://img.shields.io/badge/DOI-10.15131%2Fshef.data.17113328-blue)](https://doi.org/10.15131/shef.data.17113328)
+[![DOI](https://img.shields.io/badge/DOI-10.15131%2Fshef.data.32743494-blue)](https://doi.org/10.15131/shef.data.32743494)
 
 # AQMesh Data Pipeline
 
