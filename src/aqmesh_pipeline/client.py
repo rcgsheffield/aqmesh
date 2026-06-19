@@ -159,3 +159,21 @@ class AQMeshClient:
                 "Location %s %s: fetched %d readings.", location_number, param.label, len(batch)
             )
             yield batch
+
+    def repeat_last(self, location_number: int, param: Param) -> list[dict]:
+        """Re-fetch the most recently delivered batch without advancing the cursor (manual 4.11).
+
+        Calls ``/LocationData/Repeat`` which returns the same data as the most recent
+        ``/LocationData/Next`` response. The server-side pointer is not advanced.
+        Returns an empty list when there is no previous batch (HTTP 204 or empty body).
+
+        Note: the Repeat endpoint has no TPC segment, unlike Next.
+        """
+        s = self._settings
+        path = f"/LocationData/Repeat/{location_number}/{int(param)}/{s.units}"
+        if s.version:
+            path += f"/{s.version}"
+        resp = self._get(path)
+        if resp.status_code == httpx.codes.NO_CONTENT or not resp.content:
+            return []
+        return resp.json() or []

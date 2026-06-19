@@ -77,8 +77,25 @@ backfill flag is needed** — this is a consequence of the cursor-per-pair desig
 There is **no date-range backfill** in the current pipeline. The CLI (`cli.py`) accepts no
 `--from-date` or `--to-date` arguments. If the server-side cursor has already advanced past a
 window (i.e. the data was delivered to a previous run), it cannot be re-requested through the
-normal flow. Recovery would require resetting the AQMesh server-side cursor, which is a manual
-API operation outside this codebase.
+normal flow.
+
+The AQMesh API provides a **Repeat** endpoint (manual section 4.11) that re-delivers the most
+recently sent batch for a given (location, param) pair *without* advancing the server-side
+cursor. Use `aqmesh repeat` to re-ingest that batch:
+
+```bash
+aqmesh repeat --location 510 --param gas   # re-fetch last gas batch for location 510
+aqmesh repeat --location 510               # both gas and particle
+aqmesh repeat --all --yes                  # every location/param pair
+aqmesh repeat --location 510 --dry-run     # preview without making any API calls
+```
+
+This writes a new raw file to the raw store; deduplication happens automatically on the next
+`aqmesh clean` run. `state/pointers.json` is not modified — the server cursor has not changed.
+
+To recover batches **older than the last one**, contact EI support to have the server-side
+pointer reset manually (API manual section 3.3). Data over one year old requires special
+permission to access.
 
 ## Failure recovery
 
@@ -104,5 +121,6 @@ preserving the last-known-good position for the next hourly run.
 | What to fetch next | AQMesh server-side cursor per (location, param) via `/LocationData/Next` |
 | Local progress record | `state/pointers.json` — audit trail and failure bookmark |
 | Automatic gap fill | Yes — server cursor accumulates missed batches; next run drains them |
-| Explicit date backfill | No — not implemented; requires manual server-side cursor reset |
+| Re-fetch last batch | `aqmesh repeat` — calls `/LocationData/Repeat`; does not advance cursor |
+| Explicit date backfill | No — use `aqmesh repeat` for the last batch; older data requires EI admin reset |
 | Partial-failure recovery | Prefect task retries (×3); failed pairs skip pointer write; retried next run |
