@@ -35,6 +35,12 @@ class AQMeshClient:
     """A thin, retrying wrapper around the AQMesh REST API."""
 
     def __init__(self, settings: Settings, client: httpx.Client | None = None) -> None:
+        """Initialise the client with credentials and connection settings.
+
+        Args:
+            settings: Pipeline configuration including API credentials and base URL.
+            client: Optional pre-built httpx client (injected in tests).
+        """
         self._settings = settings
         self._client = client or httpx.Client(
             base_url=settings.base_url,
@@ -52,6 +58,7 @@ class AQMeshClient:
         self.close()
 
     def close(self) -> None:
+        """Close the underlying HTTP connection pool."""
         self._client.close()
 
     # -- authentication --------------------------------------------------
@@ -116,6 +123,11 @@ class AQMeshClient:
 
     @staticmethod
     def _sleep_backoff(attempt: int) -> None:
+        """Sleep for an exponentially increasing delay, capped at 30 seconds.
+
+        Args:
+            attempt: Zero-based retry attempt number.
+        """
         time.sleep(min(2**attempt, 30))
 
     # -- API calls -------------------------------------------------------

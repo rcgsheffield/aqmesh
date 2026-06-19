@@ -50,6 +50,16 @@ def _scale(
 
 
 def _base_frame(df: pd.DataFrame, reading_number_field: str) -> pd.DataFrame:
+    """Build the shared identity columns for a cleaned output frame.
+
+    Args:
+        df: Raw input DataFrame containing source columns.
+        reading_number_field: Column name for the reading sequence number.
+
+    Returns:
+        A new DataFrame with location_number, pod_serial_number,
+        reading_number, and reading_datestamp columns.
+    """
     out = pd.DataFrame(index=df.index)
     out["location_number"] = df.get("location_number")
     out["pod_serial_number"] = df.get("pod_serial_number")
@@ -59,12 +69,31 @@ def _base_frame(df: pd.DataFrame, reading_number_field: str) -> pd.DataFrame:
 
 
 def _append_passthrough(out: pd.DataFrame, df: pd.DataFrame, cols: tuple[str, ...]) -> None:
+    """Append environmental passthrough columns from the source frame.
+
+    Columns listed in ``cols`` are copied from ``df`` into ``out`` only
+    when they are present in the source frame.
+
+    Args:
+        out: Output DataFrame to mutate in place.
+        df: Source DataFrame to copy columns from.
+        cols: Names of columns to pass through unchanged.
+    """
     for col in cols:
         if col in df.columns:
             out[col] = df[col]
 
 
 def clean_gas(df: pd.DataFrame) -> pd.DataFrame:
+    """Apply sentinel handling and calibration to a raw gas readings frame.
+
+    Args:
+        df: Raw gas readings DataFrame as returned by the API.
+
+    Returns:
+        Tidy DataFrame with one row per reading_datestamp, sorted
+        chronologically, with calibrated gas-species columns.
+    """
     out = _base_frame(df, Param.GAS.reading_number_field)
     for sp in GAS_SPECIES:
         prescaled = f"{sp}_prescaled"
@@ -78,6 +107,15 @@ def clean_gas(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def clean_particle(df: pd.DataFrame) -> pd.DataFrame:
+    """Apply sentinel handling and calibration to a raw particle readings frame.
+
+    Args:
+        df: Raw particle readings DataFrame as returned by the API.
+
+    Returns:
+        Tidy DataFrame with one row per reading_datestamp, sorted
+        chronologically, with calibrated particle-channel columns.
+    """
     out = _base_frame(df, Param.PARTICLE.reading_number_field)
     for ch in PARTICLE_CHANNELS:
         prescale = f"{ch}_prescale"
