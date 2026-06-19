@@ -4,7 +4,9 @@ Layout under ``AQMESH_DATA_ROOT``::
 
     raw/   location=<n>/param=<gas|particle>/<pulled_at>_<seq>.json   # append-only payload
     clean/ location=<n>/aqmesh_<n>_<param>.csv                        # scaled, sentinels blanked
+           location=<n>/aqmesh_<n>_<param>.metadata.json             # sidecar data dictionary
     state/ pointers.json                                             # progress per location/param
+           assets.json                                              # asset snapshot for clean
 
 Raw files are append-only: every pull writes new files and nothing is ever
 mutated. Cleaning reads *all* raw files for a location, ordered by pull time, and
@@ -21,11 +23,12 @@ from pathlib import Path
 import pandas as pd
 
 from .config import Settings
-from .models import Param
+from .models import Asset, Param
 
 logger = logging.getLogger(__name__)
 
 POINTERS_FILENAME = "pointers.json"
+ASSETS_FILENAME = "assets.json"
 
 
 # -- path helpers --------------------------------------------------------
@@ -41,8 +44,17 @@ def clean_csv_path(settings: Settings, location_number: int, param: Param) -> Pa
     )
 
 
+def clean_metadata_path(settings: Settings, location_number: int, param: Param) -> Path:
+    """Sidecar data-dictionary path sitting next to the clean CSV (issue #58)."""
+    return clean_csv_path(settings, location_number, param).with_suffix(".metadata.json")
+
+
 def pointers_path(settings: Settings) -> Path:
     return settings.state_dir / POINTERS_FILENAME
+
+
+def assets_path(settings: Settings) -> Path:
+    return settings.state_dir / ASSETS_FILENAME
 
 
 # -- raw store -----------------------------------------------------------
@@ -93,6 +105,12 @@ def write_clean_csv(df: pd.DataFrame, path: Path) -> None:
     df.to_csv(path, index=False)
 
 
+def write_clean_metadata(metadata: dict, path: Path) -> None:
+    """Write the sidecar data dictionary for a clean CSV (issue #58)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+
+
 # -- state / pointers ----------------------------------------------------
 def load_pointers(settings: Settings) -> dict:
     path = pointers_path(settings)
@@ -108,6 +126,31 @@ def save_pointers(settings: Settings, pointers: dict) -> None:
     tmp = path.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(pointers, indent=2, sort_keys=True), encoding="utf-8")
     tmp.replace(path)
+
+
+# -- state / assets snapshot ---------------------------------------------
+def save_assets(settings: Settings, assets: list[Asset]) -> None:
+    """Persist the asset list from ingest so the offline clean stage can read it.
+
+    The clean stage never calls the API, so location provenance (name, coordinates,
+    firmware) is snapshotted here during ingest and loaded back during cleaning.
+    """
+    path = assets_path(settings)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = [a.model_dump(mode="json") for a in assets]
+    # Atomic-ish write to avoid corrupting state on interruption.
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    tmp.replace(path)
+
+
+def load_assets(settings: Settings) -> dict[int, Asset]:
+    """Load the persisted asset snapshot, keyed by location_number. Empty if absent."""
+    path = assets_path(settings)
+    if not path.exists():
+        return {}
+    records = json.loads(path.read_text(encoding="utf-8"))
+    return {a.location_number: a for a in (Asset(**r) for r in records)}
 
 
 def update_pointer(

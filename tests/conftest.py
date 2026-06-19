@@ -40,7 +40,14 @@ def settings(tmp_path) -> Settings:
 @pytest.fixture
 def assets_payload() -> list[dict]:
     return [
-        {"location_number": 510, "serial_number": 2410149, "firmware_version": "v3.22"},
+        {
+            "location_number": 510,
+            "location_name": "Sheffield City Centre",
+            "serial_number": 2410149,
+            "firmware_version": "v3.22",
+            "location_latitude": 53.38,
+            "location_longitude": -1.48,
+        },
         {"location_number": 915, "serial_number": 2410103, "firmware_version": "v5.6"},
     ]
 
@@ -56,6 +63,7 @@ def gas_batch() -> list[dict]:
         "co_prescaled": 444.39,
         "co_slope": 1.0574,
         "co_offset": -76.2663,
+        "co_units": "ppb",
         # so2 is a valid (slightly negative) reading, not a sentinel.
         "so2_state": "Reading",
         "so2_prescaled": -1.09,
@@ -86,15 +94,19 @@ def gas_batch() -> list[dict]:
 
 
 @pytest.fixture
-def seed_raw(settings, gas_batch, particle_batch):
-    """Populate the raw store for location 510 (gas + particle) and return settings."""
-    from aqmesh_pipeline.models import Param
-    from aqmesh_pipeline.storage import write_raw_batch
+def seed_raw(settings, gas_batch, particle_batch, assets_payload):
+    """Populate the raw store for location 510 (gas + particle) and return settings.
+
+    Also persists an asset snapshot so the clean stage can attach location provenance.
+    """
+    from aqmesh_pipeline.models import Asset, Param
+    from aqmesh_pipeline.storage import save_assets, write_raw_batch
 
     write_raw_batch(settings, 510, Param.GAS, gas_batch, pulled_at="20260101T000000Z", seq=0)
     write_raw_batch(
         settings, 510, Param.PARTICLE, particle_batch, pulled_at="20260101T000000Z", seq=0
     )
+    save_assets(settings, [Asset(**a) for a in assets_payload])
     return settings
 
 
