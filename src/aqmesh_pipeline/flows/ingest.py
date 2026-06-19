@@ -95,6 +95,15 @@ def ingest_raw(settings: Settings | None = None) -> dict:
         logger.info("Discovered %d locations.", len(assets))
         if not assets:
             logger.warning("No locations returned by the API — check environment/credentials.")
+        if settings.skip_locations:
+            skipped = [a for a in assets if a.location_number in settings.skip_locations]
+            if skipped:
+                logger.warning(
+                    "Skipping %d location(s) per AQMESH_SKIP_LOCATIONS: %s",
+                    len(skipped),
+                    ", ".join(str(a.location_number) for a in skipped),
+                )
+            assets = [a for a in assets if a.location_number not in settings.skip_locations]
         for asset in assets:
             for param in (Param.GAS, Param.PARTICLE):
                 summary = ingest_location_param(

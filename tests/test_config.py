@@ -35,6 +35,14 @@ def test_get_settings_reads_environment(monkeypatch, tmp_path):
     assert s.data_root == tmp_path
 
 
+def test_skip_locations_parsed_from_env(monkeypatch):
+    monkeypatch.setenv("AQMESH_USERNAME", "u")
+    monkeypatch.setenv("AQMESH_PASSWORD", "p")
+    monkeypatch.setenv("AQMESH_SKIP_LOCATIONS", "[4975, 4999]")
+    s = get_settings()
+    assert s.skip_locations == frozenset({4975, 4999})
+
+
 def test_get_settings_missing_credentials_raises(monkeypatch, tmp_path):
     monkeypatch.delenv("AQMESH_USERNAME", raising=False)
     monkeypatch.delenv("AQMESH_PASSWORD", raising=False)

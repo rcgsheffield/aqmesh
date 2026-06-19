@@ -45,6 +45,7 @@ class Settings(BaseSettings):
 
     request_timeout: float = 60.0
     max_retries: int = 4
+    skip_locations: frozenset[int] = frozenset()
 
     @computed_field  # type: ignore[prop-decorator]
     @property
