@@ -111,6 +111,29 @@ def _repeat_last_cmd(argv: Sequence[str], settings: Settings | None = None) -> N
     if args.all and args.param:
         parser.error("--param cannot be combined with --all.")
 
+    # Pre-calculate pairs for --location (no credentials needed).
+    # For --all, pairs are resolved later via get_assets() once authenticated.
+    pairs: list[tuple[int, Param]] = []
+    if not args.all:
+        if args.param == "gas":
+            loc_params: list[Param] = [Param.GAS]
+        elif args.param == "particle":
+            loc_params = [Param.PARTICLE]
+        else:
+            loc_params = list(Param)
+        pairs = [(args.location, p) for p in loc_params]
+
+    # Dry-run never makes API calls — exit before loading credentials.
+    if args.dry_run:
+        if not args.all:
+            print(f"Will re-fetch last batch for {len(pairs)} cursor(s):")
+            for location_number, param in pairs:
+                print(f"  location {location_number}  {param.label}")
+        else:
+            print("Will re-fetch last batch for ALL locations.")
+        print("Dry run — no API calls made.")
+        return
+
     if settings is None:
         try:
             settings = get_settings()
@@ -123,26 +146,10 @@ def _repeat_last_cmd(argv: Sequence[str], settings: Settings | None = None) -> N
 
     env_label = f"[{settings.environment.upper()}]"
 
-    # For --location, we know the pairs without an API call.
-    # For --all, we defer get_assets() until after confirmation so dry-run
-    # and abort paths never touch the network.
     if not args.all:
-        params: list[Param]
-        if args.param == "gas":
-            params = [Param.GAS]
-        elif args.param == "particle":
-            params = [Param.PARTICLE]
-        else:
-            params = list(Param)
-        pairs: list[tuple[int, Param]] = [(args.location, p) for p in params]
-
         print(f"Will re-fetch last batch for {len(pairs)} cursor(s) {env_label}:")
         for location_number, param in pairs:
             print(f"  location {location_number}  {param.label}")
-
-        if args.dry_run:
-            print("Dry run — no API calls made.")
-            return
 
         if settings.environment == "prod" and not args.yes:
             answer = input(
@@ -155,10 +162,6 @@ def _repeat_last_cmd(argv: Sequence[str], settings: Settings | None = None) -> N
     else:
         # --all: confirm before making any API calls.
         print(f"Will re-fetch last batch for ALL locations {env_label}.")
-
-        if args.dry_run:
-            print("Dry run — no API calls made.")
-            return
 
         if not args.yes:
             answer = input(

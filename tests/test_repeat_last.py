@@ -65,6 +65,25 @@ def test_dry_run_single_param(settings, capsys):
     assert "particle" not in out
 
 
+def test_dry_run_no_credentials_needed(monkeypatch, capsys):
+    # --dry-run should succeed without any env vars / settings configured.
+    monkeypatch.delenv("AQMESH_USERNAME", raising=False)
+    monkeypatch.delenv("AQMESH_PASSWORD", raising=False)
+    _repeat_last_cmd(["--location", "510", "--dry-run"])
+    out = capsys.readouterr().out
+    assert "Dry run" in out
+    assert "510" in out
+
+
+def test_dry_run_all_no_credentials_needed(monkeypatch, capsys):
+    monkeypatch.delenv("AQMESH_USERNAME", raising=False)
+    monkeypatch.delenv("AQMESH_PASSWORD", raising=False)
+    _repeat_last_cmd(["--all", "--dry-run", "--yes"])
+    out = capsys.readouterr().out
+    assert "Dry run" in out
+    assert "ALL" in out
+
+
 # ---------------------------------------------------------------------------
 # successful re-fetch
 # ---------------------------------------------------------------------------
