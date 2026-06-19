@@ -95,6 +95,11 @@ Key variables in `.env` (see [`.env.example`](../.env.example) for the complete 
 | `AQMESH_DATA_ROOT` | Data volume path; set by bootstrap to `DATA_ROOT`. |
 | `AQMESH_ENVIRONMENT` | `test` (apitest.aqmeshdata.net) or `prod` (api.aqmeshdata.net); set to `prod` by bootstrap. |
 
+> [!NOTE]
+> These are your **production** credentials. Do not copy them to a local development
+> environment — use test-environment credentials there instead. See the
+> [README](../README.md#development) for details.
+
 ## Verify the deployment
 
 1. **Both services are running:**

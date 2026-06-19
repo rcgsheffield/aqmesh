@@ -77,6 +77,7 @@ backfill flag is needed** — this is a consequence of the cursor-per-pair desig
 There is **no date-range backfill** in the current pipeline. The CLI (`cli.py`) accepts no
 `--from-date` or `--to-date` arguments. If the server-side cursor has already advanced past a
 window (i.e. the data was delivered to a previous run), it cannot be re-requested through the
+<<<<<<< feat/repeat-last
 normal flow.
 
 The AQMesh API provides a **Repeat** endpoint (manual section 4.11) that re-delivers the most
@@ -96,6 +97,10 @@ This writes a new raw file to the raw store; deduplication happens automatically
 To recover batches **older than the last one**, contact EI support to have the server-side
 pointer reset manually (API manual section 3.3). Data over one year old requires special
 permission to access.
+=======
+normal flow. Recovery would require resetting the AQMesh server-side cursor, which is a manual
+API operation outside this codebase.
+>>>>>>> main
 
 ## Failure recovery
 
@@ -121,6 +126,10 @@ preserving the last-known-good position for the next hourly run.
 | What to fetch next | AQMesh server-side cursor per (location, param) via `/LocationData/Next` |
 | Local progress record | `state/pointers.json` — audit trail and failure bookmark |
 | Automatic gap fill | Yes — server cursor accumulates missed batches; next run drains them |
+<<<<<<< feat/repeat-last
 | Re-fetch last batch | `aqmesh repeat-last` — calls `/LocationData/Repeat`; does not advance cursor |
 | Explicit date backfill | No — use `aqmesh repeat-last` for the last batch; older data requires EI admin reset |
+=======
+| Explicit date backfill | No — not implemented; requires manual server-side cursor reset |
+>>>>>>> main
 | Partial-failure recovery | Prefect task retries (×3); failed pairs skip pointer write; retried next run |
