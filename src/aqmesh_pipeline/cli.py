@@ -6,7 +6,7 @@ Usage::
     aqmesh ingest        # download raw data only
     aqmesh clean         # rebuild cleaned CSVs from the raw store
     aqmesh check         # smoke-test: authenticate and list pods (no writes)
-    aqmesh repeat-last   # re-ingest the last delivered batch (does not advance cursor)
+    aqmesh repeat        # re-ingest the last delivered batch (does not advance cursor)
 """
 
 from __future__ import annotations
@@ -72,7 +72,7 @@ def check(settings: Settings | None = None) -> None:
 def _repeat_last_cmd(argv: Sequence[str], settings: Settings | None = None) -> None:
     """Parse repeat-last arguments and re-ingest the last delivered batch(es)."""
     parser = argparse.ArgumentParser(
-        prog="aqmesh repeat-last",
+        prog="aqmesh repeat",
         description=(
             "Re-fetch the most recently delivered reading batch for one or more locations "
             "using the AQMesh Repeat endpoint (manual 4.11). "
@@ -234,7 +234,7 @@ _COMMANDS = {
 def main(argv: Sequence[str] | None = None) -> None:
     argv_list = list(argv) if argv is not None else sys.argv[1:]
 
-    if argv_list and argv_list[0] == "repeat-last":
+    if argv_list and argv_list[0] == "repeat":
         logging.basicConfig(
             level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
         )

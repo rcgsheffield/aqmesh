@@ -81,13 +81,13 @@ normal flow.
 
 The AQMesh API provides a **Repeat** endpoint (manual section 4.11) that re-delivers the most
 recently sent batch for a given (location, param) pair *without* advancing the server-side
-cursor. Use `aqmesh repeat-last` to re-ingest that batch:
+cursor. Use `aqmesh repeat` to re-ingest that batch:
 
 ```bash
-aqmesh repeat-last --location 510 --param gas   # re-fetch last gas batch for location 510
-aqmesh repeat-last --location 510               # both gas and particle
-aqmesh repeat-last --all --yes                  # every location/param pair
-aqmesh repeat-last --location 510 --dry-run     # preview without making any API calls
+aqmesh repeat --location 510 --param gas   # re-fetch last gas batch for location 510
+aqmesh repeat --location 510               # both gas and particle
+aqmesh repeat --all --yes                  # every location/param pair
+aqmesh repeat --location 510 --dry-run     # preview without making any API calls
 ```
 
 This writes a new raw file to the raw store; deduplication happens automatically on the next
@@ -121,6 +121,6 @@ preserving the last-known-good position for the next hourly run.
 | What to fetch next | AQMesh server-side cursor per (location, param) via `/LocationData/Next` |
 | Local progress record | `state/pointers.json` — audit trail and failure bookmark |
 | Automatic gap fill | Yes — server cursor accumulates missed batches; next run drains them |
-| Re-fetch last batch | `aqmesh repeat-last` — calls `/LocationData/Repeat`; does not advance cursor |
-| Explicit date backfill | No — use `aqmesh repeat-last` for the last batch; older data requires EI admin reset |
+| Re-fetch last batch | `aqmesh repeat` — calls `/LocationData/Repeat`; does not advance cursor |
+| Explicit date backfill | No — use `aqmesh repeat` for the last batch; older data requires EI admin reset |
 | Partial-failure recovery | Prefect task retries (×3); failed pairs skip pointer write; retried next run |

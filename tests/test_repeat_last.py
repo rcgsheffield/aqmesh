@@ -274,6 +274,6 @@ def test_param_and_all_mutually_exclusive(settings):
 def test_main_routes_repeat_last(settings, monkeypatch, capsys):
     # Dry-run: no API calls, just verify the shim fires and parses correctly.
     monkeypatch.setattr("aqmesh_pipeline.cli.get_settings", lambda: settings)
-    cli.main(["repeat-last", "--location", "510", "--dry-run"])
+    cli.main(["repeat", "--location", "510", "--dry-run"])
     out = capsys.readouterr().out
     assert "Dry run" in out
