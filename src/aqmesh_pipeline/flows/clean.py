@@ -39,6 +39,12 @@ def clean_data(settings: Settings | None = None) -> list[dict]:
     logger = get_run_logger()
     results: list[dict] = []
 
+    logger.info("raw_dir: %s (exists=%s)", settings.raw_dir, settings.raw_dir.exists())
+    if not settings.raw_dir.exists():
+        logger.warning("raw_dir does not exist — has ingest run successfully yet?")
+        logger.info("Clean complete: wrote 0 CSV file(s).")
+        return results
+
     for loc_dir in sorted(settings.raw_dir.glob("location=*")):
         location_number = int(loc_dir.name.split("=", 1)[1])
         for param in (Param.GAS, Param.PARTICLE):
