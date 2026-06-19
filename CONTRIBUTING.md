@@ -28,6 +28,18 @@ uv run ruff check .           # lint
 uv run pytest                 # tests
 ```
 
+We use [pre-commit](https://pre-commit.com/) to keep `uv.lock` in sync with
+`pyproject.toml` (CI rejects a stale lockfile). Install and enable the hooks once per
+clone:
+
+```bash
+uv tool install pre-commit    # one-time, installs the tool
+pre-commit install            # enable the hooks in this clone
+```
+
+If you edit dependencies, run `uv lock` to regenerate `uv.lock` and commit it alongside
+`pyproject.toml`.
+
 ## Coding standards
 
 - **Lint:** code must pass `uv run ruff check .` (rules and 100-char line length are
