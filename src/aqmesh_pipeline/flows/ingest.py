@@ -86,10 +86,15 @@ def ingest_raw(settings: Settings | None = None) -> dict:
     pointers = load_pointers(settings)
     summaries: list[dict] = []
 
+    logger.info("environment: %s  base_url: %s", settings.environment, settings.base_url)
+    logger.info("data_root: %s", settings.data_root)
+
     with AQMeshClient(settings) as client:
         client.authenticate()
         assets = client.get_assets()
         logger.info("Discovered %d locations.", len(assets))
+        if not assets:
+            logger.warning("No locations returned by the API — check environment/credentials.")
         for asset in assets:
             for param in (Param.GAS, Param.PARTICLE):
                 summary = ingest_location_param(
