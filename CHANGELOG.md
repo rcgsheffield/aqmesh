@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.1.3](https://github.com/rcgsheffield/aqmesh/compare/v0.1.2...v0.1.3) (2026-06-19)
+
+
+### Bug Fixes
+
+* **deploy:** ensure UTF-8 locale for prefect CLI commands ([29be471](https://github.com/rcgsheffield/aqmesh/commit/29be471658ce72b59d270b300dea196c12a9433f))
+* **deploy:** ensure UTF-8 locale for prefect CLI commands ([4be452d](https://github.com/rcgsheffield/aqmesh/commit/4be452d0ba6cce60d48f920b8b97292cd474958e)), closes [#40](https://github.com/rcgsheffield/aqmesh/issues/40)
+* **deploy:** use --overwrite when creating Prefect work pool ([a98713c](https://github.com/rcgsheffield/aqmesh/commit/a98713c39038daae4a004adafb3d4e760c60cd10))
+* **deploy:** use --overwrite when creating Prefect work pool ([2198062](https://github.com/rcgsheffield/aqmesh/commit/2198062bb5354f743c2fa25e1c31c0dfcd31d4f6)), closes [#34](https://github.com/rcgsheffield/aqmesh/issues/34)
+* **deploy:** use en_GB.UTF-8 locale and export at script top ([c9c171b](https://github.com/rcgsheffield/aqmesh/commit/c9c171b1dfeb2c4ca8d8511d6445b38aaeae7834))
+* switch to dotted-module entrypoint to fix relative imports ([46d3bec](https://github.com/rcgsheffield/aqmesh/commit/46d3bec1c8011d94f46999591f7859eabdf39561))
+* switch to dotted-module entrypoint to fix relative imports ([69d9296](https://github.com/rcgsheffield/aqmesh/commit/69d92962920e798d9e47850731acc99ac47700ee)), closes [#33](https://github.com/rcgsheffield/aqmesh/issues/33)
+
+
+### Documentation
+
+* document systemctl edit drop-ins for operator overrides ([cb99d68](https://github.com/rcgsheffield/aqmesh/commit/cb99d689c498e9f33002529f32bec2274beb58f9))
+* document systemctl edit drop-ins for operator overrides ([b1b02e1](https://github.com/rcgsheffield/aqmesh/commit/b1b02e150270be4da44ba0253d75183e44ab05f2)), closes [#32](https://github.com/rcgsheffield/aqmesh/issues/32)
+
+
+### Continuous Integration
+
+* catch uv.lock / pyproject.toml drift before CI ([#38](https://github.com/rcgsheffield/aqmesh/issues/38)) ([254171d](https://github.com/rcgsheffield/aqmesh/commit/254171d212099a2e6187f91f9b35b92721938a21))
+* catch uv.lock / pyproject.toml drift before CI ([#38](https://github.com/rcgsheffield/aqmesh/issues/38)) ([1568eaf](https://github.com/rcgsheffield/aqmesh/commit/1568eafbe8f61c4e513adb342ec85af9b8be0851))
+
 ## [0.1.2](https://github.com/rcgsheffield/aqmesh/compare/v0.1.1...v0.1.2) (2026-06-19)
 
 
