@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.1.4](https://github.com/rcgsheffield/aqmesh/compare/v0.1.3...v0.1.4) (2026-06-19)
+
+
+### Bug Fixes
+
+* **deps:** sync uv.lock with pyproject 0.1.3 ([#47](https://github.com/rcgsheffield/aqmesh/issues/47)) ([fe9b0d1](https://github.com/rcgsheffield/aqmesh/commit/fe9b0d1d1dc30884650f4ab3d2bad38e5a6427eb))
+
+
+### Documentation
+
+* front-door README and operator index improvements ([#45](https://github.com/rcgsheffield/aqmesh/issues/45)) ([0b56e4e](https://github.com/rcgsheffield/aqmesh/commit/0b56e4e137dba421e3256b9ae8aa27a8dc074c49))
+
+
+### Continuous Integration
+
+* archive releases to ORDA for citable DOIs ([#44](https://github.com/rcgsheffield/aqmesh/issues/44)) ([1d32c2e](https://github.com/rcgsheffield/aqmesh/commit/1d32c2e643ee1101562cdaa63aa47b332f77732d)), closes [#43](https://github.com/rcgsheffield/aqmesh/issues/43)
+* auto-sync uv.lock on release-please branches ([#56](https://github.com/rcgsheffield/aqmesh/issues/56)) ([600117d](https://github.com/rcgsheffield/aqmesh/commit/600117da48ab9fa5caaafb7c900af18416b10f65))
+
+
+### Miscellaneous
+
+* add pre-commit essentials (ruff, file hygiene, dependabot) ([#48](https://github.com/rcgsheffield/aqmesh/issues/48)) ([4dcff26](https://github.com/rcgsheffield/aqmesh/commit/4dcff2622fb420b601cac330e3ed7fe8f4505ade))
+* **ci:** pin runs-on to ubuntu-24.04 ([#54](https://github.com/rcgsheffield/aqmesh/issues/54)) ([9db94eb](https://github.com/rcgsheffield/aqmesh/commit/9db94eb236eefe4a1a88c5839b0c972accfec688)), closes [#52](https://github.com/rcgsheffield/aqmesh/issues/52)
+* **deps:** bump https://github.com/astral-sh/ruff-pre-commit ([#49](https://github.com/rcgsheffield/aqmesh/issues/49)) ([cf6dbc8](https://github.com/rcgsheffield/aqmesh/commit/cf6dbc8fcd2ad41346ec42a459833bf3df089ff5))
+* **deps:** bump https://github.com/pre-commit/pre-commit-hooks ([#50](https://github.com/rcgsheffield/aqmesh/issues/50)) ([d63dda3](https://github.com/rcgsheffield/aqmesh/commit/d63dda3a56261f0d41e6f4d8b35ccfda2c4ef9ec))
+
 ## [0.1.3](https://github.com/rcgsheffield/aqmesh/compare/v0.1.2...v0.1.3) (2026-06-19)
 
 
