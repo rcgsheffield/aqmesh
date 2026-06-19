@@ -1,0 +1,31 @@
+name: actionlint
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/**"
+      - ".github/workflows/actionlint.yml"
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+      - ".github/workflows/actionlint.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run actionlint
+        run: |
+          # The runner ships ShellCheck, so actionlint also lints inline
+          # `run:` scripts. Pin the version for reproducibility.
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash) 1.7.12
+          ./actionlint -color
