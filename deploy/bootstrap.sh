@@ -3,7 +3,7 @@
 # Provision the AQMesh pipeline on an Ubuntu 24.04 VPS.
 #
 # Run as root (or with sudo) from a checkout of this repo, e.g.:
-#     sudo APP_DIR=/opt/aqmesh DATA_ROOT=/mnt/aqmesh-data bash deploy/bootstrap.sh
+#     sudo APP_DIR=/opt/aqmesh DATA_ROOT=/mnt/aqmesh bash deploy/bootstrap.sh
 #
 # It is idempotent: safe to re-run after pulling new code.
 set -euo pipefail
@@ -12,7 +12,7 @@ export LANG=en_GB.UTF-8
 export LC_ALL=en_GB.UTF-8
 
 APP_DIR="${APP_DIR:-/opt/aqmesh}"
-DATA_ROOT="${DATA_ROOT:-/mnt/aqmesh-data}"   # the mounted shared storage volume
+DATA_ROOT="${DATA_ROOT:-/mnt/aqmesh}"   # the mounted shared storage volume
 SERVICE_USER="${SERVICE_USER:-aqmesh}"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 API_READY_TIMEOUT="${API_READY_TIMEOUT:-120}"   # seconds to wait for /api/health

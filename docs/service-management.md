@@ -243,18 +243,18 @@ but are not actually breaking runs, see [`troubleshooting.md`](troubleshooting.m
 ### Data volume full or unmounted
 
 ```bash
-df -h /mnt/aqmesh-data
+df -h /mnt/aqmesh
 mount | grep aqmesh
 ```
 
 If the volume is unmounted, remount it and restart the worker so it can write output files again:
 
 ```bash
-sudo mount /mnt/aqmesh-data
+sudo mount /mnt/aqmesh
 sudo systemctl restart prefect-worker
 ```
 
-If the volume is full, archive or remove old data files under `/mnt/aqmesh-data/raw/` before
+If the volume is full, archive or remove old data files under `/mnt/aqmesh/raw/` before
 restarting. For expected data growth rates, see [`system-requirements.md`](system-requirements.md).
 
 ### API credentials expired
