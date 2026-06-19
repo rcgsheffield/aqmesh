@@ -1,0 +1,21 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "packages": {
+    ".": {
+      "release-type": "python",
+      "package-name": "aqmesh-pipeline",
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        { "type": "generic", "path": "src/aqmesh_pipeline/__init__.py" }
+      ],
+      "changelog-sections": [
+        { "type": "feat", "section": "Features" },
+        { "type": "fix", "section": "Bug Fixes" },
+        { "type": "docs", "section": "Documentation" },
+        { "type": "ci", "section": "Continuous Integration" },
+        { "type": "test", "section": "Tests" },
+        { "type": "chore", "section": "Miscellaneous" }
+      ]
+    }
+  }
+}
