@@ -23,6 +23,8 @@ dev = [
     "pytest-cov>=5",
     "respx>=0.21",
     "ruff>=0.6",
+    "pip-audit>=2.7",
+    "bandit[toml]>=1.7",
 ]
 
 [build-system]
@@ -39,6 +41,9 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
