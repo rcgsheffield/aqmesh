@@ -68,7 +68,9 @@ def _base_frame(df: pd.DataFrame, reading_number_field: str) -> pd.DataFrame:
     out["location_number"] = df.get("location_number")
     out["pod_serial_number"] = df.get("pod_serial_number")
     out["reading_number"] = df.get(reading_number_field)
-    out["reading_datestamp"] = pd.to_datetime(df.get("reading_datestamp"), errors="coerce")
+    out["reading_datestamp"] = pd.to_datetime(
+        df.get("reading_datestamp"), errors="coerce", utc=True
+    )
     return out
 
 
@@ -171,7 +173,7 @@ def resample_daily(df: pd.DataFrame, freq: str = "1D") -> pd.DataFrame:
     """Resample a cleaned location/param frame onto a regular daily grid.
 
     Expects the output of :func:`clean_readings` for a single pod: a frame with a
-    ``reading_datestamp`` column and one column per pollutant. Every column is
+    UTC-aware ``reading_datestamp`` column and one column per pollutant. Every column is
     carried through -- nothing is filtered out, so researchers can decide what to
     work with. Within each ``freq`` bucket, numeric columns are averaged (the
     bucket value is the **mean** of the readings it contains, ignoring missing
@@ -191,10 +193,16 @@ def resample_daily(df: pd.DataFrame, freq: str = "1D") -> pd.DataFrame:
 
     Returns:
         A frame with one row per ``freq`` bucket from the first to the last
-        reading, carrying every (aggregated) column. Empty in -> empty out.
+        reading, carrying every (aggregated) column, plus an ``n_readings``
+        column (``int64``) recording how many raw rows fell in each bucket.
+        ``n_readings`` uses :meth:`~pandas.core.resample.Resampler.size` —
+        it counts every row in the bucket, including rows where all sensor
+        columns are ``NaN`` — so it differs from ``.count()`` (which skips
+        ``NaN``). Buckets that contain no readings get ``n_readings = 0``.
+        Empty in -> empty out (``n_readings`` column is still added).
     """
     if df.empty:
-        return df
+        return df.reindex(columns=[*df.columns, "n_readings"])
 
     df = df.dropna(subset=["reading_datestamp"])
     if df.empty:
@@ -209,8 +217,10 @@ def resample_daily(df: pd.DataFrame, freq: str = "1D") -> pd.DataFrame:
         for col in indexed.columns
         if col not in _IDENTITY_COLS
     }
-    resampled = indexed.resample(freq).agg(agg)
+    resampler = indexed.resample(freq)
+    resampled = resampler.agg(agg)
 
     for offset, (col, value) in enumerate(identity.items()):
         resampled.insert(offset, col, value)
+    resampled.insert(len(identity), "n_readings", resampler.size())
     return resampled.reset_index()
