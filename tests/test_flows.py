@@ -6,7 +6,7 @@ HTTP is mocked with respx; flows run against the session's prefect_test_harness.
 from __future__ import annotations
 
 import json
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import httpx
 import pandas as pd
@@ -14,7 +14,7 @@ import pytest
 import respx
 import yaml
 
-from aqmesh_pipeline.flows.clean import clean_data
+from aqmesh_pipeline.flows.clean import clean_data, clean_location_param
 from aqmesh_pipeline.flows.ingest import ingest_raw
 from aqmesh_pipeline.flows.metadata import sync_location_metadata
 from aqmesh_pipeline.flows.pipeline import pipeline
@@ -248,6 +248,20 @@ def test_clean_data_no_resample_skips_resampled_csv(seed_raw):
     assert clean_csv_path(seed_raw, 510, Param.GAS).exists()
     assert not resampled_csv_path(seed_raw, 510, Param.GAS).exists()
     assert not seed_raw.resampled_dir.exists()
+
+
+@respx.mock
+def test_clean_location_param_resample_failure_leaves_no_partial_output(seed_raw):
+    """If resample_daily raises, neither the clean CSV nor the metadata sidecar is written."""
+    _allow_prefect()
+    with (
+        patch("aqmesh_pipeline.flows.clean.resample_daily", side_effect=ValueError("boom")),
+        pytest.raises(ValueError),
+    ):
+        clean_location_param.fn(seed_raw, 510, Param.GAS, resample=True)
+
+    assert not clean_csv_path(seed_raw, 510, Param.GAS).exists()
+    assert not clean_metadata_path(seed_raw, 510, Param.GAS).exists()
 
 
 @respx.mock
