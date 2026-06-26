@@ -359,6 +359,10 @@ def test_pipeline_end_to_end(monkeypatch, tmp_path, assets_payload, gas_batch, p
 
     saved = load_assets(S(username="test-user", password="test-pass", data_root=tmp_path))
     assert set(saved.keys()) == {510, 915}
+    # README.txt should be written to the data root on every pipeline run.
+    readme = tmp_path / "README.txt"
+    assert readme.exists()
+    assert "raw/" in readme.read_text()
 
 
 @respx.mock

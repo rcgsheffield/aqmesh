@@ -31,6 +31,22 @@ POINTERS_FILENAME = "pointers.json"
 ASSETS_FILENAME = "assets.json"
 
 
+# -- data-root docs ------------------------------------------------------
+def write_data_docs(settings: Settings) -> list[Path]:
+    """Copy all files from the bundled resources/ directory to the data root."""
+    from importlib.resources import files
+
+    resources = files("aqmesh_pipeline.resources")
+    written = []
+    for item in resources.iterdir():
+        if item.is_file() and not item.name.startswith("_"):
+            dest = settings.data_root / item.name
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text(item.read_text(encoding="utf-8"), encoding="utf-8")
+            written.append(dest)
+    return written
+
+
 # -- path helpers --------------------------------------------------------
 def raw_param_dir(settings: Settings, location_number: int, param: Param) -> Path:
     return settings.raw_dir / f"location={location_number}" / f"param={param.label}"
