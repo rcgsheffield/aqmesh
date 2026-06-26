@@ -41,6 +41,18 @@ Module map, data layout, and infrastructure detail: **docs/architecture.md**. Sc
 
 Tests use Prefect's in-process ephemeral mode (configured in `conftest.py`) — no external Prefect server is needed. HTTP calls to the AQMesh API are mocked with `respx`. The `settings` fixture points at a `tmp_path` data root; use it rather than constructing `Settings` directly.
 
+### CI checks (run automatically on every PR)
+
+- **lock-check** — `uv lock --check` (lockfile in sync)
+- **lint** — `ruff check` + `ruff format --check`
+- **security** — `pip-audit` (dependency CVEs) + `bandit` (static analysis)
+- **test** — `pytest` on Python 3.12 and 3.13 (coverage ≥ 90% enforced)
+- **actionlint** — GitHub Actions workflow syntax
+- **shellcheck** — shell script linting
+- **link-check** — broken links in Markdown docs
+
+PR test plans should only list manual or environment-specific steps not covered above.
+
 ## Production
 
 Deployed as two systemd services (`prefect-server`, `prefect-worker`) on Ubuntu 24.04, scheduled `6 * * * *` (Europe/London). Deploy/update:
