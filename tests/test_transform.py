@@ -202,3 +202,60 @@ def test_resample_daily_skips_nan_within_bin():
 
 def test_resample_daily_empty_returns_empty():
     assert resample_daily(pd.DataFrame()).empty
+
+
+def test_resample_daily_n_readings():
+    df = _cleaned_frame(
+        [
+            # Day 1: two readings (one with NaN co — the row still counts).
+            {
+                "location_number": 510,
+                "pod_serial_number": 2410149,
+                "reading_number": 1,
+                "reading_datestamp": "2026-01-01T09:00:00",
+                "co": float("nan"),
+            },
+            {
+                "location_number": 510,
+                "pod_serial_number": 2410149,
+                "reading_number": 2,
+                "reading_datestamp": "2026-01-01T15:00:00",
+                "co": 20.0,
+            },
+            # Day 2: no readings — empty bin.
+            # Day 3: one reading — sparse bin.
+            {
+                "location_number": 510,
+                "pod_serial_number": 2410149,
+                "reading_number": 3,
+                "reading_datestamp": "2026-01-03T09:00:00",
+                "co": 30.0,
+            },
+        ]
+    )
+    out = resample_daily(df).set_index("reading_datestamp")
+
+    assert out.loc["2026-01-01", "n_readings"] == 2  # two observations, one NaN-valued
+    assert out.loc["2026-01-02", "n_readings"] == 0  # empty bin → 0, not NaN
+    assert out.loc["2026-01-03", "n_readings"] == 1  # sparse bin
+
+
+def test_resample_daily_n_readings_column_position():
+    df = _cleaned_frame(
+        [
+            {
+                "location_number": 510,
+                "pod_serial_number": 2410149,
+                "reading_number": 1,
+                "reading_datestamp": "2026-01-01T09:00:00",
+                "co": 10.0,
+            },
+        ]
+    )
+    out = resample_daily(df)
+    assert list(out.columns)[:4] == [
+        "reading_datestamp",
+        "location_number",
+        "pod_serial_number",
+        "n_readings",
+    ]

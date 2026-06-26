@@ -207,4 +207,5 @@ def resample_daily(df: pd.DataFrame, freq: str = "1D") -> pd.DataFrame:
 
     for offset, (col, value) in enumerate(identity.items()):
         resampled.insert(offset, col, value)
+    resampled.insert(len(identity), "n_readings", indexed.resample(freq).size())
     return resampled.reset_index()
