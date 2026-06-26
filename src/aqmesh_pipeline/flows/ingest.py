@@ -16,13 +16,17 @@ from prefect.cache_policies import NO_CACHE
 
 from ..client import AQMeshClient
 from ..config import Settings, get_settings
+from ..metadata import build_raw_store_descriptor
 from ..models import READING_DATESTAMP_FIELD, Param
 from ..storage import (
+    load_assets,
     load_pointers,
+    raw_store_descriptor_path,
     save_assets,
     save_pointers,
     update_pointer,
     write_raw_batch,
+    write_raw_store_descriptor,
 )
 
 
@@ -136,6 +140,16 @@ def ingest_raw(settings: Settings | None = None) -> dict:
                     )
 
     save_pointers(settings, pointers)
+
+    descriptor = build_raw_store_descriptor(
+        assets=load_assets(settings),
+        pointers=pointers,
+        summaries=summaries,
+        settings=settings,
+        generated_at=datetime.now(UTC),
+    )
+    write_raw_store_descriptor(descriptor, raw_store_descriptor_path(settings))
+
     total_new = sum(s["new_readings"] for s in summaries)
     failed = [s for s in summaries if s["status"] == "failed"]
     not_found = [s for s in summaries if s["status"] == "not_found"]

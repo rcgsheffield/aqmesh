@@ -12,6 +12,7 @@ import httpx
 import pandas as pd
 import pytest
 import respx
+import yaml
 
 from aqmesh_pipeline.flows.clean import clean_data
 from aqmesh_pipeline.flows.ingest import ingest_raw
@@ -25,6 +26,7 @@ from aqmesh_pipeline.storage import (
     load_assets,
     load_pointers,
     raw_param_dir,
+    raw_store_descriptor_path,
     resampled_csv_path,
     save_assets,
 )
@@ -85,6 +87,16 @@ def test_ingest_raw_writes_data_and_pointers(settings, assets_payload, gas_batch
     assert assets_path(settings).exists()
     snapshot = {a["location_number"] for a in json.loads(assets_path(settings).read_text())}
     assert snapshot == {510, 915}
+
+    # Raw store descriptor written alongside the data volume.
+    desc_path = raw_store_descriptor_path(settings)
+    assert desc_path.exists()
+    desc = yaml.safe_load(desc_path.read_text())
+    assert desc["name"] == "aqmesh-raw"
+    resources = {r["name"]: r for r in desc["resources"]}
+    assert "raw-gas-510" in resources
+    assert resources["raw-gas-510"]["last_reading_number"] == 3256955
+    assert resources["raw-gas-510"]["location_name"] == "Sheffield City Centre"
 
 
 @respx.mock
