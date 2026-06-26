@@ -102,13 +102,17 @@ def read_raw_readings(settings: Settings, location_number: int, param: Param) ->
 # -- clean store ---------------------------------------------------------
 def write_clean_csv(df: pd.DataFrame, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(path, index=False)
+    tmp = path.with_suffix(".csv.tmp")
+    df.to_csv(tmp, index=False)
+    tmp.replace(path)
 
 
 def write_clean_metadata(metadata: dict, path: Path) -> None:
     """Write the sidecar data dictionary for a clean CSV (issue #58)."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    tmp = path.with_suffix(".metadata.json.tmp")
+    tmp.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    tmp.replace(path)
 
 
 # -- state / pointers ----------------------------------------------------
