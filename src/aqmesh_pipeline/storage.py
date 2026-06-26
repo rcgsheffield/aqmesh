@@ -115,6 +115,18 @@ def write_clean_metadata(metadata: dict, path: Path) -> None:
     tmp.replace(path)
 
 
+# -- clean store ---------------------------------------------------------
+def write_location_info(settings: Settings, asset_data: dict) -> Path:
+    """Write asset+sensor metadata to clean/location=<n>/info.json."""
+    dir_ = settings.clean_dir / f"location={asset_data['location_number']}"
+    dir_.mkdir(parents=True, exist_ok=True)
+    path = dir_ / "info.json"
+    tmp = path.with_name("info.json.tmp")
+    tmp.write_text(json.dumps(asset_data, indent=2, sort_keys=True), encoding="utf-8")
+    tmp.replace(path)
+    return path
+
+
 # -- state / pointers ----------------------------------------------------
 def load_pointers(settings: Settings) -> dict:
     path = pointers_path(settings)

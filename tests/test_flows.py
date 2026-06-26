@@ -6,21 +6,26 @@ HTTP is mocked with respx; flows run against the session's prefect_test_harness.
 from __future__ import annotations
 
 import json
+from unittest.mock import Mock
 
 import httpx
 import pandas as pd
+import pytest
 import respx
 
 from aqmesh_pipeline.flows.clean import clean_data
 from aqmesh_pipeline.flows.ingest import ingest_raw
+from aqmesh_pipeline.flows.metadata import sync_location_metadata
 from aqmesh_pipeline.flows.pipeline import pipeline
-from aqmesh_pipeline.models import Param
+from aqmesh_pipeline.models import Asset, Param
 from aqmesh_pipeline.storage import (
     assets_path,
     clean_csv_path,
     clean_metadata_path,
+    load_assets,
     load_pointers,
     raw_param_dir,
+    save_assets,
 )
 
 
@@ -44,6 +49,20 @@ def _mock_api(base_url, assets_payload, gas_batch, particle_batch):
         for param, batch in ((Param.GAS, gas_batch), (Param.PARTICLE, particle_batch)):
             url = f"{base_url}/LocationData/Next/{loc}/{int(param)}/01/1"
             respx.get(url).mock(side_effect=[httpx.Response(200, json=batch), httpx.Response(204)])
+
+
+def _mock_metadata(base_url, assets_payload, sensor_detail_payload=None):
+    """Register auth, assets, and sensor-detail routes for the metadata flow."""
+    _allow_prefect()
+    respx.post(f"{base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"token": "tok"})
+    )
+    respx.get(f"{base_url}/Pods/Assets_V1").mock(
+        return_value=httpx.Response(200, json=assets_payload)
+    )
+    respx.get(f"{base_url}/sensor/SensorDetail//0").mock(
+        return_value=httpx.Response(200, json=sensor_detail_payload or [])
+    )
 
 
 @respx.mock
@@ -181,6 +200,15 @@ def test_clean_data_no_raw_is_noop(settings):
 
 
 @respx.mock
+def test_clean_raises_when_asset_registry_is_empty(settings):
+    _allow_prefect()
+    # assets.json present but empty (e.g. API returned zero pods) -> fail fast.
+    save_assets(settings, [])
+    with pytest.raises(RuntimeError, match="Asset registry.*empty"):
+        clean_data(settings)
+
+
+@respx.mock
 def test_clean_location_param_noop_when_empty(settings):
     _allow_prefect()
     # A location dir exists but holds no readings -> rows 0, no CSV written.
@@ -188,6 +216,83 @@ def test_clean_location_param_noop_when_empty(settings):
     results = clean_data(settings)
     assert all(r["rows"] == 0 and r["csv"] is None for r in results)
     assert not clean_csv_path(settings, 510, Param.GAS).exists()
+
+
+@respx.mock
+def test_sync_location_metadata_writes_info_and_assets(
+    settings, assets_payload, sensor_detail_payload
+):
+    """Metadata flow must write state/assets.json and info.json for every registered location."""
+    _mock_metadata(settings.base_url, assets_payload, sensor_detail_payload)
+
+    records = sync_location_metadata(settings)
+
+    assert len(records) == 2
+    assert {r["location_number"] for r in records} == {510, 915}
+
+    saved = load_assets(settings)
+    assert len(saved) == 2
+
+    for loc in (510, 915):
+        info_path = settings.clean_dir / f"location={loc}" / "info.json"
+        assert info_path.exists(), f"info.json missing for location {loc}"
+        data = json.loads(info_path.read_text())
+        assert data["location_number"] == loc
+        assert "sensors" in data
+
+
+@respx.mock
+def test_sync_location_metadata_joins_sensors_to_locations(
+    settings, assets_payload, sensor_detail_payload
+):
+    """Sensor details must be joined to their pod's location by serial_number."""
+    _mock_metadata(settings.base_url, assets_payload, sensor_detail_payload)
+
+    records = sync_location_metadata(settings)
+
+    # assets_payload has serial 2410103 for location 915; sensor_detail_payload also
+    # references serial 2410103, so location 915's info.json should carry those sensors.
+    loc_915 = next(r for r in records if r["location_number"] == 915)
+    assert len(loc_915["sensors"]) == len(sensor_detail_payload)
+
+    # location 510 (serial 2410149) has no matching sensors in the fixture.
+    loc_510 = next(r for r in records if r["location_number"] == 510)
+    assert loc_510["sensors"] == []
+
+
+@respx.mock
+def test_clean_includes_404_location(settings, gas_batch, particle_batch):
+    """A location in the asset registry with no raw data must appear in clean results."""
+    _allow_prefect()
+    # Seed state/assets.json with two locations: 510 (has raw data) and 4975 (does not).
+    save_assets(
+        settings,
+        [
+            Asset(location_number=510, serial_number=2410149),
+            Asset(location_number=4975, serial_number=9999999),
+        ],
+    )
+    # Seed raw data for location 510 only.
+    from aqmesh_pipeline.storage import write_raw_batch
+
+    write_raw_batch(settings, 510, Param.GAS, gas_batch, pulled_at="20260101T000000Z", seq=0)
+    write_raw_batch(
+        settings, 510, Param.PARTICLE, particle_batch, pulled_at="20260101T000000Z", seq=0
+    )
+
+    results = clean_data(settings)
+
+    location_numbers = {r["location_number"] for r in results}
+    assert 510 in location_numbers
+    assert 4975 in location_numbers
+
+    # 404 location: no CSV written, but it appears in the results.
+    not_found = [r for r in results if r["location_number"] == 4975]
+    assert all(r["rows"] == 0 and r["csv"] is None for r in not_found)
+
+    # Healthy location: CSVs written.
+    assert clean_csv_path(settings, 510, Param.GAS).exists()
+    assert clean_csv_path(settings, 510, Param.PARTICLE).exists()
 
 
 @respx.mock
@@ -199,8 +304,37 @@ def test_pipeline_end_to_end(monkeypatch, tmp_path, assets_payload, gas_batch, p
 
     base_url = "https://apitest.aqmeshdata.net/api"
     _mock_api(base_url, assets_payload, gas_batch, particle_batch)
+    respx.get(f"{base_url}/sensor/SensorDetail//0").mock(return_value=httpx.Response(200, json=[]))
 
     result = pipeline()
 
     assert result["ingest"]["locations"] == 2
     assert any(r["csv"] for r in result["clean"])
+    # All registered locations should appear in the asset registry after the pipeline.
+    from aqmesh_pipeline.config import Settings as S
+
+    saved = load_assets(S(username="test-user", password="test-pass", data_root=tmp_path))
+    assert set(saved.keys()) == {510, 915}
+
+
+@respx.mock
+def test_pipeline_continues_when_metadata_sync_fails(
+    monkeypatch, tmp_path, assets_payload, gas_batch, particle_batch
+):
+    """ingest_raw() must run even when sync_location_metadata() raises."""
+    monkeypatch.setenv("AQMESH_USERNAME", "test-user")
+    monkeypatch.setenv("AQMESH_PASSWORD", "test-pass")
+    monkeypatch.setenv("AQMESH_ENVIRONMENT", "test")
+    monkeypatch.setenv("AQMESH_DATA_ROOT", str(tmp_path))
+
+    monkeypatch.setattr(
+        "aqmesh_pipeline.flows.pipeline.sync_location_metadata",
+        Mock(side_effect=RuntimeError("sensor-detail 500")),
+    )
+
+    base_url = "https://apitest.aqmeshdata.net/api"
+    _mock_api(base_url, assets_payload, gas_batch, particle_batch)
+
+    result = pipeline()
+
+    assert result["ingest"]["locations"] > 0
