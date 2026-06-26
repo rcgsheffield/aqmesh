@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import json
+
 from aqmesh_pipeline.models import Param
 from aqmesh_pipeline.storage import (
     load_pointers,
     read_raw_readings,
     save_pointers,
     update_pointer,
+    write_location_info,
     write_raw_batch,
 )
 
@@ -49,6 +52,13 @@ def test_read_without_reading_number_skips_dedup(settings):
     df = read_raw_readings(settings, 510, Param.GAS)
     assert len(df) == 2
     assert "gas_reading_number" not in df.columns
+
+
+def test_write_location_info_round_trip(settings):
+    asset_data = {"location_number": 510, "name": "Test Pod"}
+    path = write_location_info(settings, asset_data)
+    assert path.exists()
+    assert json.loads(path.read_text()) == asset_data
 
 
 def test_pointers_round_trip(settings):
