@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
+from . import __version__
 from .models import GAS_SPECIES, PARTICLE_CHANNELS, Asset, Param
 from .storage import raw_param_dir
 
@@ -243,7 +244,7 @@ def build_raw_store_descriptor(
             "Gas sentinels -1000 through -991; "
             "particle sentinels -1000, -893, -892 are converted to NaN during cleaning."
         ),
-        "version": "0.1.4",
+        "version": __version__,
         "licenses": [
             {
                 "name": "OGL-UK-3.0",
