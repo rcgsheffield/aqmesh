@@ -3,7 +3,7 @@
 
 # AQMesh Data Pipeline
 
-Outdoor air quality sensors data pipeline for the [AQMesh](https://www.aqmesh.com) platform.
+Outdoor air quality sensors data pipeline for the [AQMesh](https://www.aqmesh.com) [data platform](https://www.aqmeshdata.net/).
 
 It downloads all raw readings from the AQMesh API to a shared storage volume and cleans them into
 research-ready CSV. Orchestrated with [Prefect 3](https://docs.prefect.io/v3/get-started).

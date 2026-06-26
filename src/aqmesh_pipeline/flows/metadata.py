@@ -40,7 +40,7 @@ def sync_location_metadata(settings: Settings | None = None) -> list[dict]:
         record["sensors"] = sensors_by_pod.get(asset.serial_number, [])
         records.append(record)
 
-    save_assets(settings, records)
+    save_assets(settings, assets)
 
     for record in records:
         write_location_info(settings, record)

@@ -7,28 +7,51 @@ one CSV per location/param under ``clean/``.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from prefect import flow, get_run_logger, task
 
 from ..config import Settings, get_settings
-from ..models import Param
-from ..storage import clean_csv_path, load_assets, read_raw_readings, write_clean_csv
+from ..metadata import build_metadata
+from ..models import Asset, Param
+from ..storage import (
+    clean_csv_path,
+    clean_metadata_path,
+    load_assets,
+    read_raw_readings,
+    write_clean_csv,
+    write_clean_metadata,
+)
 from ..transform import clean_readings
 
 
 @task(retries=2, retry_delay_seconds=10)
-def clean_location_param(settings: Settings, location_number: int, param: Param) -> dict:
-    """Clean one location/param and write its CSV. No-op if there is no raw data."""
+def clean_location_param(
+    settings: Settings, location_number: int, param: Param, asset: Asset | None = None
+) -> dict:
+    """Clean one location/param, write its CSV and metadata sidecar. No-op if no raw data."""
     raw = read_raw_readings(settings, location_number, param)
     if raw.empty:
-        return {"location_number": location_number, "param": param.label, "rows": 0, "csv": None}
+        return {
+            "location_number": location_number,
+            "param": param.label,
+            "rows": 0,
+            "csv": None,
+            "metadata": None,
+        }
     cleaned = clean_readings(raw, param)
     path = clean_csv_path(settings, location_number, param)
     write_clean_csv(cleaned, path)
+
+    metadata = build_metadata(cleaned, raw, param, asset, settings, datetime.now(UTC))
+    meta_path = clean_metadata_path(settings, location_number, param)
+    write_clean_metadata(metadata, meta_path)
     return {
         "location_number": location_number,
         "param": param.label,
         "rows": len(cleaned),
         "csv": str(path),
+        "metadata": str(meta_path),
     }
 
 
@@ -43,12 +66,11 @@ def clean_data(settings: Settings | None = None) -> list[dict]:
 
     assets = load_assets(settings)
     if assets:
-        location_numbers = sorted(a["location_number"] for a in assets)
+        location_numbers = sorted(assets.keys())
         logger.info("Processing %d location(s) from asset registry.", len(location_numbers))
     elif settings.raw_dir.exists():
         location_numbers = sorted(
-            int(d.name.split("=", 1)[1])
-            for d in settings.raw_dir.glob("location=*")
+            int(d.name.split("=", 1)[1]) for d in settings.raw_dir.glob("location=*")
         )
         logger.info(
             "No asset registry found; discovered %d location(s) from raw store.",
@@ -60,8 +82,9 @@ def clean_data(settings: Settings | None = None) -> list[dict]:
         return results
 
     for location_number in location_numbers:
+        asset = assets.get(location_number)
         for param in (Param.GAS, Param.PARTICLE):
-            results.append(clean_location_param(settings, location_number, param))
+            results.append(clean_location_param(settings, location_number, param, asset))
 
     written = sum(1 for r in results if r["csv"])
     logger.info("Clean complete: wrote %d CSV file(s).", written)

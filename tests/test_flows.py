@@ -8,15 +8,18 @@ from __future__ import annotations
 import json
 
 import httpx
+import pandas as pd
 import respx
 
 from aqmesh_pipeline.flows.clean import clean_data
 from aqmesh_pipeline.flows.ingest import ingest_raw
 from aqmesh_pipeline.flows.metadata import sync_location_metadata
 from aqmesh_pipeline.flows.pipeline import pipeline
-from aqmesh_pipeline.models import Param
+from aqmesh_pipeline.models import Asset, Param
 from aqmesh_pipeline.storage import (
+    assets_path,
     clean_csv_path,
+    clean_metadata_path,
     load_assets,
     load_pointers,
     raw_param_dir,
@@ -74,6 +77,11 @@ def test_ingest_raw_writes_data_and_pointers(settings, assets_payload, gas_batch
     pointers = load_pointers(settings)
     assert pointers["510"]["gas"]["new_readings"] == len(gas_batch)
     assert pointers["510"]["gas"]["last_reading_number"] == 3256955
+
+    # Asset snapshot persisted so the offline clean stage can read provenance.
+    assert assets_path(settings).exists()
+    snapshot = {a["location_number"] for a in json.loads(assets_path(settings).read_text())}
+    assert snapshot == {510, 915}
 
 
 @respx.mock
@@ -166,6 +174,20 @@ def test_clean_data_writes_one_csv_per_param(seed_raw):
     assert clean_csv_path(seed_raw, 510, Param.GAS).exists()
     assert clean_csv_path(seed_raw, 510, Param.PARTICLE).exists()
 
+    # Each CSV has a sibling metadata sidecar whose columns match the CSV header.
+    for param in (Param.GAS, Param.PARTICLE):
+        meta_path = clean_metadata_path(seed_raw, 510, param)
+        assert meta_path.exists()
+        meta = json.loads(meta_path.read_text())
+        csv_cols = list(pd.read_csv(clean_csv_path(seed_raw, 510, param)).columns)
+        assert set(meta["columns"]) == set(csv_cols)
+        # Provenance flowed from the persisted asset snapshot.
+        assert meta["provenance"]["location_name"] == "Sheffield City Centre"
+        assert meta["provenance"]["latitude"] == 53.38
+    # Gas units came from the raw <sp>_units field.
+    gas_meta = json.loads(clean_metadata_path(seed_raw, 510, Param.GAS).read_text())
+    assert gas_meta["columns"]["co"]["units"] == "ppb"
+
 
 @respx.mock
 def test_clean_data_no_raw_is_noop(settings):
@@ -232,12 +254,16 @@ def test_clean_includes_404_location(settings, gas_batch, particle_batch):
     """A location in the asset registry with no raw data must appear in clean results."""
     _allow_prefect()
     # Seed state/assets.json with two locations: 510 (has raw data) and 4975 (does not).
-    save_assets(settings, [
-        {"location_number": 510, "serial_number": 2410149, "sensors": []},
-        {"location_number": 4975, "serial_number": 9999999, "sensors": []},
-    ])
+    save_assets(
+        settings,
+        [
+            Asset(location_number=510, serial_number=2410149),
+            Asset(location_number=4975, serial_number=9999999),
+        ],
+    )
     # Seed raw data for location 510 only.
     from aqmesh_pipeline.storage import write_raw_batch
+
     write_raw_batch(settings, 510, Param.GAS, gas_batch, pulled_at="20260101T000000Z", seq=0)
     write_raw_batch(
         settings, 510, Param.PARTICLE, particle_batch, pulled_at="20260101T000000Z", seq=0
@@ -267,9 +293,7 @@ def test_pipeline_end_to_end(monkeypatch, tmp_path, assets_payload, gas_batch, p
 
     base_url = "https://apitest.aqmeshdata.net/api"
     _mock_api(base_url, assets_payload, gas_batch, particle_batch)
-    respx.get(f"{base_url}/sensor/SensorDetail//0").mock(
-        return_value=httpx.Response(200, json=[])
-    )
+    respx.get(f"{base_url}/sensor/SensorDetail//0").mock(return_value=httpx.Response(200, json=[]))
 
     result = pipeline()
 
@@ -277,5 +301,6 @@ def test_pipeline_end_to_end(monkeypatch, tmp_path, assets_payload, gas_batch, p
     assert any(r["csv"] for r in result["clean"])
     # All registered locations should appear in the asset registry after the pipeline.
     from aqmesh_pipeline.config import Settings as S
+
     saved = load_assets(S(username="test-user", password="test-pass", data_root=tmp_path))
-    assert {a["location_number"] for a in saved} == {510, 915}
+    assert set(saved.keys()) == {510, 915}
