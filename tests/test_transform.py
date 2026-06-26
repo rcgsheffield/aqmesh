@@ -134,10 +134,33 @@ def test_resample_daily_preserves_identity_keeps_all_columns():
     assert out.loc[0, "location_number"] == 510
     assert out.loc[0, "pod_serial_number"] == 2410149
     assert list(out.columns)[:3] == ["reading_datestamp", "location_number", "pod_serial_number"]
-    # Nothing is filtered out: every other column is carried through too.
-    assert "reading_number" in out.columns  # numeric -> averaged
+    # Sequence counter is dropped; other columns are carried through.
+    assert "reading_number" not in out.columns
     assert "co" in out.columns
     assert "reading_status" in out.columns  # non-numeric -> joined distinct
+
+
+def test_resample_daily_drops_reading_number():
+    df = _cleaned_frame(
+        [
+            {
+                "location_number": 510,
+                "pod_serial_number": 2410149,
+                "reading_number": 3256952,
+                "reading_datestamp": "2026-01-01T09:01:00",
+                "co": 10.0,
+            },
+            {
+                "location_number": 510,
+                "pod_serial_number": 2410149,
+                "reading_number": 3256953,
+                "reading_datestamp": "2026-01-01T14:30:00",
+                "co": 20.0,
+            },
+        ]
+    )
+    out = resample_daily(df)
+    assert "reading_number" not in out.columns
 
 
 def test_resample_daily_joins_distinct_status_within_bin():
