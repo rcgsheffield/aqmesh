@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from prefect import flow, get_run_logger
 
+from ..config import get_settings
+from ..storage import write_data_docs
 from .clean import clean_data
 from .ingest import ingest_raw
 from .metadata import sync_location_metadata
@@ -17,6 +19,7 @@ def pipeline(resample: bool = True) -> dict:
     CSVs under ``resampled/``.
     """
     logger = get_run_logger()
+    write_data_docs(get_settings())
     try:
         sync_location_metadata()
     except Exception:
