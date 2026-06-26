@@ -32,6 +32,7 @@ def test_clean_gas_sorted_and_has_metadata(gas_batch):
     cleaned = clean_readings(pd.DataFrame(gas_batch), Param.GAS)
     assert list(cleaned["reading_number"]) == [3256954, 3256955]
     assert pd.api.types.is_datetime64_any_dtype(cleaned["reading_datestamp"])
+    assert "temperature_c" in cleaned.columns
     assert "temperature_f" in cleaned.columns
 
 
@@ -40,6 +41,10 @@ def test_clean_particle(particle_batch):
     assert cleaned.loc[0, "pm2_5"] == pytest.approx(0.17)
     assert math.isnan(cleaned.loc[0, "pm1"])  # -1000 sentinel
     assert cleaned.loc[0, "reading_status"] == "OK"
+    # Both temperature columns always emitted; temperature_c absent from fixture → NA.
+    assert "temperature_c" in cleaned.columns
+    assert pd.isna(cleaned.loc[0, "temperature_c"])
+    assert "temperature_f" in cleaned.columns
 
 
 def test_clean_empty_returns_empty():
