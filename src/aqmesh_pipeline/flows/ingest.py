@@ -122,7 +122,7 @@ def ingest_raw(settings: Settings | None = None) -> dict:
         if not assets:
             logger.warning("No locations returned by the API — check environment/credentials.")
         for asset in assets:
-            for param in (Param.GAS, Param.PARTICLE):
+            for param in list(Param):
                 summary = ingest_location_param(
                     client, settings, asset.location_number, param, pulled_at
                 )

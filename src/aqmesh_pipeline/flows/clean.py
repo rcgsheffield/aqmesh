@@ -115,7 +115,7 @@ def clean_data(settings: Settings | None = None, resample: bool = True) -> list[
 
     for location_number in location_numbers:
         asset = assets.get(location_number)
-        for param in (Param.GAS, Param.PARTICLE):
+        for param in list(Param):
             results.append(clean_location_param(settings, location_number, param, asset, resample))
 
     written = sum(1 for r in results if r["csv"])

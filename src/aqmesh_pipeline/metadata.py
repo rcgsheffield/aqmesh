@@ -193,7 +193,7 @@ def build_raw_store_descriptor(
         asset = assets.get(loc_num)
         loc_name = asset.location_name if asset else None
 
-        for param in (Param.GAS, Param.PARTICLE):
+        for param in list(Param):
             ptr = pointers[loc_str].get(param.label)
             if ptr is None:
                 continue
