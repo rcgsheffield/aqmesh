@@ -2,11 +2,12 @@
 
 Layout under ``AQMESH_DATA_ROOT``::
 
-    raw/   location=<n>/param=<gas|particle>/<pulled_at>_<seq>.json   # append-only payload
-    clean/ location=<n>/aqmesh_<n>_<param>.csv                        # scaled, sentinels blanked
-           location=<n>/aqmesh_<n>_<param>.metadata.json             # sidecar data dictionary
-    state/ pointers.json                                             # progress per location/param
-           assets.json                                              # asset snapshot for clean
+    raw/   location=<n>/param=<gas|particle>/<pulled_at>_<seq>.json     # append-only payload
+                                              <pulled_at>_<seq>.json.sha256  # integrity sidecar
+    clean/ location=<n>/aqmesh_<n>_<param>.csv                          # scaled, sentinels blanked
+           location=<n>/aqmesh_<n>_<param>.metadata.json                # sidecar data dictionary
+    state/ pointers.json                                               # per-location/param progress
+           assets.json                                                 # asset snapshot for clean
 
 Raw files are append-only: every pull writes new files and nothing is ever
 mutated. Cleaning reads *all* raw files for a location, ordered by pull time, and
@@ -16,6 +17,7 @@ dedupes by the reading number keeping the last occurrence -- so rebased values
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from pathlib import Path
@@ -27,6 +29,11 @@ from .config import Settings
 from .models import Asset, Param
 
 logger = logging.getLogger(__name__)
+
+
+class CorruptRawFileError(RuntimeError):
+    """Raised when a raw data file fails an integrity or parse check."""
+
 
 POINTERS_FILENAME = "pointers.json"
 ASSETS_FILENAME = "assets.json"
@@ -74,6 +81,15 @@ def clean_metadata_path(settings: Settings, location_number: int, param: Param) 
     return clean_csv_path(settings, location_number, param).with_suffix(".metadata.json")
 
 
+def clean_csvw_path(settings: Settings, location_number: int, param: Param) -> Path:
+    """CSVW per-file descriptor path next to the clean CSV.
+
+    Follows the W3C CSVW naming convention: ``<csv-url>-metadata.json``.
+    """
+    csv = clean_csv_path(settings, location_number, param)
+    return csv.with_name(csv.name + "-metadata.json")
+
+
 def raw_store_descriptor_path(settings: Settings) -> Path:
     """Frictionless datapackage descriptor for the entire raw store (issue #69)."""
     return settings.raw_dir / "datapackage.yaml"
@@ -100,7 +116,17 @@ def write_raw_batch(
     out_dir = raw_param_dir(settings, location_number, param)
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / f"{pulled_at}_{seq:04d}.json"
-    path.write_text(json.dumps(batch), encoding="utf-8")
+    encoded = json.dumps(batch).encode("utf-8")
+
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_bytes(encoded)
+    tmp.replace(path)
+
+    sha_path = path.with_name(path.name + ".sha256")
+    sha_tmp = sha_path.with_name(sha_path.name + ".tmp")
+    sha_tmp.write_text(hashlib.sha256(encoded).hexdigest(), encoding="utf-8")
+    sha_tmp.replace(sha_path)
+
     return path
 
 
@@ -118,7 +144,17 @@ def read_raw_readings(settings: Settings, location_number: int, param: Param) ->
 
     records: list[dict] = []
     for f in files:
-        records.extend(json.loads(f.read_text(encoding="utf-8")))
+        content = f.read_text(encoding="utf-8")
+        sha_path = f.with_name(f.name + ".sha256")
+        if sha_path.exists():
+            expected = sha_path.read_text(encoding="utf-8").strip()
+            if hashlib.sha256(content.encode("utf-8")).hexdigest() != expected:
+                raise CorruptRawFileError(f"Checksum mismatch for raw file: {f}")
+        try:
+            records.extend(json.loads(content))
+        except json.JSONDecodeError as exc:
+            logger.error("Corrupt raw file (JSON parse error): %s", f)
+            raise CorruptRawFileError(f"Corrupt raw file: {f}") from exc
     if not records:
         return pd.DataFrame()
 
@@ -130,6 +166,13 @@ def read_raw_readings(settings: Settings, location_number: int, param: Param) ->
 
 
 # -- clean store ---------------------------------------------------------
+def _write_json_atomic(data: dict, path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    tmp.replace(path)
+
+
 def write_clean_csv(df: pd.DataFrame, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".csv.tmp")
@@ -139,10 +182,12 @@ def write_clean_csv(df: pd.DataFrame, path: Path) -> None:
 
 def write_clean_metadata(metadata: dict, path: Path) -> None:
     """Write the sidecar data dictionary for a clean CSV (issue #58)."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".metadata.json.tmp")
-    tmp.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
-    tmp.replace(path)
+    _write_json_atomic(metadata, path)
+
+
+def write_clean_csvw(csvw: dict, path: Path) -> None:
+    """Write the CSVW Table descriptor for a clean CSV."""
+    _write_json_atomic(csvw, path)
 
 
 def write_raw_store_descriptor(descriptor: dict, path: Path) -> None:

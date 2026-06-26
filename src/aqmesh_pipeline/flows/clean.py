@@ -13,16 +13,19 @@ from datetime import UTC, datetime
 from prefect import flow, get_run_logger, task
 
 from ..config import Settings, get_settings
+from ..csvw import build_csvw
 from ..metadata import build_metadata
 from ..models import Asset, Param
 from ..storage import (
     assets_path,
     clean_csv_path,
+    clean_csvw_path,
     clean_metadata_path,
     load_assets,
     read_raw_readings,
     resampled_csv_path,
     write_clean_csv,
+    write_clean_csvw,
     write_clean_metadata,
 )
 from ..transform import clean_readings, resample_daily
@@ -50,6 +53,7 @@ def clean_location_param(
             "csv": None,
             "resampled_csv": None,
             "metadata": None,
+            "csvw": None,
         }
     cleaned = clean_readings(raw, param)
     # Compute before any writes so a resample failure leaves no partial output on disk,
@@ -63,6 +67,10 @@ def clean_location_param(
     meta_path = clean_metadata_path(settings, location_number, param)
     write_clean_metadata(metadata, meta_path)
 
+    csvw = build_csvw(metadata, path.name)
+    csvw_path = clean_csvw_path(settings, location_number, param)
+    write_clean_csvw(csvw, csvw_path)
+
     resampled_path = None
     if resampled is not None:
         resampled_path = resampled_csv_path(settings, location_number, param)
@@ -75,6 +83,7 @@ def clean_location_param(
         "csv": str(path),
         "resampled_csv": str(resampled_path) if resampled_path else None,
         "metadata": str(meta_path),
+        "csvw": str(csvw_path),
     }
 
 

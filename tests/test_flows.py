@@ -23,6 +23,7 @@ from aqmesh_pipeline.models import Asset, Param
 from aqmesh_pipeline.storage import (
     assets_path,
     clean_csv_path,
+    clean_csvw_path,
     clean_metadata_path,
     load_assets,
     load_pointers,
@@ -303,6 +304,20 @@ def test_clean_data_writes_one_csv_per_param(seed_raw):
     gas_meta = json.loads(clean_metadata_path(seed_raw, 510, Param.GAS).read_text())
     assert gas_meta["columns"]["co"]["units"] == "ppb"
 
+    # Each CSV has a sibling CSVW descriptor whose column order matches the CSV.
+    for param in (Param.GAS, Param.PARTICLE):
+        csvw_path = clean_csvw_path(seed_raw, 510, param)
+        assert csvw_path.exists(), f"CSVW missing for {param.label}"
+        doc = json.loads(csvw_path.read_text())
+        assert "http://www.w3.org/ns/csvw" in doc["@context"]
+        assert doc["url"] == clean_csv_path(seed_raw, 510, param).name
+        csv_cols = list(pd.read_csv(clean_csv_path(seed_raw, 510, param)).columns)
+        csvw_names = [c["name"] for c in doc["tableSchema"]["columns"]]
+        assert csvw_names == csv_cols
+    # Provenance with coordinates yields dcat:spatial.
+    gas_doc = json.loads(clean_csvw_path(seed_raw, 510, Param.GAS).read_text())
+    assert gas_doc["dcat:spatial"]["geo:lat"] == 53.38
+
 
 @respx.mock
 def test_clean_data_writes_resampled_csv_by_default(seed_raw):
@@ -487,6 +502,41 @@ def test_pipeline_end_to_end(monkeypatch, tmp_path, assets_payload, gas_batch, p
     readme = tmp_path / "README.txt"
     assert readme.exists()
     assert "raw/" in readme.read_text()
+
+
+@respx.mock
+def test_clean_data_csvw_no_spatial_when_no_coords(settings, gas_batch, particle_batch):
+    """CSVW must not include dcat:spatial when the asset has no coordinates."""
+    _allow_prefect()
+    from aqmesh_pipeline.storage import write_raw_batch
+
+    write_raw_batch(settings, 915, Param.GAS, gas_batch, pulled_at="20260101T000000Z", seq=0)
+    write_raw_batch(
+        settings, 915, Param.PARTICLE, particle_batch, pulled_at="20260101T000000Z", seq=0
+    )
+    # Asset 915 has no latitude/longitude.
+    save_assets(settings, [Asset(location_number=915, serial_number=2410103)])
+
+    clean_data(settings)
+
+    for param in (Param.GAS, Param.PARTICLE):
+        csvw_path = clean_csvw_path(settings, 915, param)
+        assert csvw_path.exists()
+        doc = json.loads(csvw_path.read_text())
+        assert "dcat:spatial" not in doc
+
+
+@respx.mock
+def test_clean_location_param_result_includes_csvw_key(seed_raw):
+    """Every result dict from clean_data must carry a 'csvw' key."""
+    _allow_prefect()
+    results = clean_data(seed_raw)
+
+    for r in results:
+        assert "csvw" in r, f"'csvw' key missing from result: {r}"
+    # Locations with data have a non-None csvw path alongside their csv.
+    written = [r for r in results if r["csv"]]
+    assert all(r["csvw"] is not None for r in written)
 
 
 @respx.mock
