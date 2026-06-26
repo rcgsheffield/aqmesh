@@ -53,14 +53,21 @@ def build_csvw(metadata: dict, csv_filename: str) -> dict:
         desc_parts.append(f"Calibrated readings ({processing['formula']}).")
     sentinel = processing.get("sentinel_handling", "")
     if sentinel:
-        desc_parts.append(sentinel.capitalize() + ".")
+        desc_parts.append(sentinel[0].upper() + sentinel[1:] + ".")
     dc_description = " ".join(desc_parts)
 
     dc_modified = datetime.fromisoformat(prov["generated_at"]).replace(microsecond=0).isoformat()
 
     title_loc = location_number if location_number is not None else "unknown"
     doc: dict = {
-        "@context": "http://www.w3.org/ns/csvw",
+        "@context": [
+            "http://www.w3.org/ns/csvw",
+            {
+                "dcat": "http://www.w3.org/ns/dcat#",
+                "geo": "http://www.w3.org/2003/01/geo/wgs84_pos#",
+                "schema": "https://schema.org/",
+            },
+        ],
         "@type": "Table",
         "url": csv_filename,
         "dc:title": f"AQMesh cleaned readings — {param} — location {title_loc}",

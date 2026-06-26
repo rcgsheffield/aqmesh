@@ -58,7 +58,11 @@ _METADATA = {
 def test_build_csvw_top_level_fields():
     doc = build_csvw(_METADATA, "aqmesh_510_gas.csv")
 
-    assert doc["@context"] == "http://www.w3.org/ns/csvw"
+    ctx = doc["@context"]
+    assert ctx[0] == "http://www.w3.org/ns/csvw"
+    assert ctx[1]["dcat"] == "http://www.w3.org/ns/dcat#"
+    assert ctx[1]["geo"] == "http://www.w3.org/2003/01/geo/wgs84_pos#"
+    assert ctx[1]["schema"] == "https://schema.org/"
     assert doc["@type"] == "Table"
     assert doc["url"] == "aqmesh_510_gas.csv"
     assert doc["dc:title"] == "AQMesh cleaned readings — gas — location 510"
@@ -132,6 +136,7 @@ def test_build_csvw_dc_description_content():
     desc = doc["dc:description"]
     assert "Calibrated readings" in desc
     assert "sentinels" in desc.lower()
+    assert "NaN" in desc  # capitalize() would corrupt this to "nan"
 
 
 def test_build_csvw_unicode_roundtrips():
