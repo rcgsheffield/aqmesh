@@ -19,7 +19,6 @@ from ..config import Settings, get_settings
 from ..metadata import build_raw_store_descriptor
 from ..models import READING_DATESTAMP_FIELD, Param
 from ..storage import (
-    load_assets,
     load_pointers,
     raw_store_descriptor_path,
     save_assets,
@@ -143,7 +142,7 @@ def ingest_raw(settings: Settings | None = None) -> dict:
 
     try:
         descriptor = build_raw_store_descriptor(
-            assets=load_assets(settings),
+            assets={a.location_number: a for a in assets},
             pointers=pointers,
             summaries=summaries,
             settings=settings,

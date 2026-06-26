@@ -239,6 +239,24 @@ def test_descriptor_marks_404_pod_offline(settings, assets_payload, gas_batch, p
 
 
 @respx.mock
+def test_descriptor_uses_fresh_assets_not_stale_snapshot(
+    settings, assets_payload, gas_batch, particle_batch
+):
+    """Descriptor must reflect the freshly-fetched assets, not a stale disk snapshot."""
+    # Seed stale assets.json with a wrong location name.
+    stale = [dict(a, location_name="STALE NAME") for a in assets_payload]
+    assets_path(settings).parent.mkdir(parents=True, exist_ok=True)
+    assets_path(settings).write_text(json.dumps(stale))
+
+    _mock_api(settings.base_url, assets_payload, gas_batch, particle_batch)
+    ingest_raw(settings)
+
+    desc = yaml.safe_load(raw_store_descriptor_path(settings).read_text())
+    resources = {r["name"]: r for r in desc["resources"]}
+    assert resources["raw-gas-510"]["location_name"] == "Sheffield City Centre"
+
+
+@respx.mock
 def test_ingest_raw_continues_when_descriptor_write_fails(
     settings, assets_payload, gas_batch, particle_batch, monkeypatch
 ):
