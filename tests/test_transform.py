@@ -201,7 +201,9 @@ def test_resample_daily_skips_nan_within_bin():
 
 
 def test_resample_daily_empty_returns_empty():
-    assert resample_daily(pd.DataFrame()).empty
+    out = resample_daily(pd.DataFrame())
+    assert out.empty
+    assert "n_readings" in out.columns
 
 
 def test_resample_daily_n_readings():

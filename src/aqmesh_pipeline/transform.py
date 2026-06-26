@@ -190,10 +190,16 @@ def resample_daily(df: pd.DataFrame, freq: str = "1D") -> pd.DataFrame:
 
     Returns:
         A frame with one row per ``freq`` bucket from the first to the last
-        reading, carrying every (aggregated) column. Empty in -> empty out.
+        reading, carrying every (aggregated) column, plus an ``n_readings``
+        column (``int64``) recording how many raw rows fell in each bucket.
+        ``n_readings`` uses :meth:`~pandas.core.resample.Resampler.size` —
+        it counts every row in the bucket, including rows where all sensor
+        columns are ``NaN`` — so it differs from ``.count()`` (which skips
+        ``NaN``). Buckets that contain no readings get ``n_readings = 0``.
+        Empty in -> empty out (``n_readings`` column is still added).
     """
     if df.empty:
-        return df
+        return df.reindex(columns=[*df.columns, "n_readings"])
 
     identity = {col: df[col].iloc[0] for col in _IDENTITY_COLS if col in df.columns}
     indexed = df.set_index("reading_datestamp").sort_index()
@@ -203,9 +209,10 @@ def resample_daily(df: pd.DataFrame, freq: str = "1D") -> pd.DataFrame:
         for col in indexed.columns
         if col not in _IDENTITY_COLS
     }
-    resampled = indexed.resample(freq).agg(agg)
+    resampler = indexed.resample(freq)
+    resampled = resampler.agg(agg)
 
     for offset, (col, value) in enumerate(identity.items()):
         resampled.insert(offset, col, value)
-    resampled.insert(len(identity), "n_readings", indexed.resample(freq).size())
+    resampled.insert(len(identity), "n_readings", resampler.size())
     return resampled.reset_index()
