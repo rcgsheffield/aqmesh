@@ -111,7 +111,7 @@ def read_raw_readings(settings: Settings, location_number: int, param: Param) ->
 def write_clean_csv(df: pd.DataFrame, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".csv.tmp")
-    df.to_csv(tmp, index=False)
+    df.to_csv(tmp, index=False, date_format="%Y-%m-%dT%H:%M:%S")
     tmp.replace(path)
 
 

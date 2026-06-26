@@ -6,6 +6,7 @@ HTTP is mocked with respx; flows run against the session's prefect_test_harness.
 from __future__ import annotations
 
 import json
+import re
 from unittest.mock import Mock
 
 import httpx
@@ -214,6 +215,24 @@ def test_clean_data_no_resample_skips_resampled_csv(seed_raw):
     assert clean_csv_path(seed_raw, 510, Param.GAS).exists()
     assert not resampled_csv_path(seed_raw, 510, Param.GAS).exists()
     assert not seed_raw.resampled_dir.exists()
+
+
+@respx.mock
+def test_reading_datestamp_serialised_as_iso(seed_raw):
+    _allow_prefect()
+    clean_data(seed_raw)
+
+    iso_ts = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$")
+
+    for csv_path in (
+        clean_csv_path(seed_raw, 510, Param.GAS),
+        resampled_csv_path(seed_raw, 510, Param.GAS),
+    ):
+        raw = pd.read_csv(csv_path, dtype=str)
+        timestamps = raw["reading_datestamp"].dropna()
+        assert len(timestamps) > 0, f"No timestamps in {csv_path.name}"
+        bad = [v for v in timestamps if not iso_ts.match(v)]
+        assert not bad, f"Unexpected format in {csv_path.name}: {bad}"
 
 
 @respx.mock
