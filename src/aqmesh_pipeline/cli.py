@@ -32,6 +32,7 @@ from .flows.clean import clean_data
 from .flows.ingest import ingest_raw
 from .flows.metadata import sync_location_metadata
 from .flows.pipeline import pipeline
+from .flows.validate import validate_raw_store
 from .models import Param
 from .storage import write_raw_batch
 
@@ -351,6 +352,7 @@ _COMMANDS = {
     "metadata": sync_location_metadata,
     "ingest": ingest_raw,
     "clean": clean_data,
+    "validate": validate_raw_store,
     "check": check,
     "ping": ping,
 }
@@ -377,7 +379,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         "command",
         nargs="?",
         default="pipeline",
-        choices=_COMMANDS.keys(),
+        choices=list(_COMMANDS.keys()),
         help="Which flow to run (default: pipeline).",
     )
     parser.add_argument(
@@ -391,6 +393,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     if args.command in ("clean", "pipeline"):
         _COMMANDS[args.command](resample=not args.no_resample)
+    elif args.command == "validate":
+        report = _COMMANDS["validate"]()
+        if report.get("invalid", 0):
+            raise SystemExit(1)
     else:
         _COMMANDS[args.command]()
 

@@ -1,0 +1,131 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/rcgsheffield/aqmesh/schemas/raw_particle_reading.json",
+  "title": "AQMesh raw particle reading",
+  "description": "A single object from the LocationData/Next particle endpoint (AQMesh API manual §4.15). Each batch file is a JSON array of these objects. Sentinel values (-1000, -893, -892) indicate a channel is unusable and are converted to NaN during cleaning. Note: particle channels use '_prescale' (no trailing 'd'), unlike gas channels.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "particle_reading_number",
+    "location_number",
+    "pod_serial_number",
+    "reading_datestamp"
+  ],
+  "properties": {
+    "particle_reading_number": {
+      "type": "integer",
+      "description": "Unique per-reading identifier. Used for deduplication; when the same reading_number appears in multiple raw files, the last occurrence wins."
+    },
+    "location_number": {
+      "type": "integer",
+      "description": "Pod location identifier, also used as the storage partition key (location=<n>)."
+    },
+    "pod_serial_number": {
+      "type": "integer",
+      "description": "Hardware serial number of the AQMesh pod."
+    },
+    "owner_number": {
+      "type": "integer",
+      "description": "Account owner identifier."
+    },
+    "reading_datestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp of the reading, ISO 8601 format (e.g. 2019-03-09T16:11:00)."
+    },
+    "reading_status": {
+      "type": "string",
+      "description": "Overall reading status (e.g. 'OK', 'Other Fault Zero', 'Stabilizing')."
+    },
+    "temperature_c": {
+      "type": ["number", "null"],
+      "description": "Ambient temperature, degrees Celsius."
+    },
+    "temperature_f": {
+      "type": ["number", "null"],
+      "description": "Ambient temperature, degrees Fahrenheit. Present on some firmware versions."
+    },
+    "pressure": {
+      "type": ["number", "null"],
+      "description": "Atmospheric pressure, hPa."
+    },
+    "humidity": {
+      "type": ["number", "null"],
+      "description": "Relative humidity, %."
+    },
+    "battery_voltage": {
+      "type": ["number", "null"],
+      "description": "Battery voltage, V."
+    },
+    "super_cap_voltage": {
+      "type": ["number", "null"],
+      "description": "Supercapacitor voltage, V."
+    },
+    "battery_low": {
+      "type": ["boolean", "null"],
+      "description": "True when the battery is below the low-voltage threshold."
+    },
+    "pm1_prescale": {
+      "type": ["number", "null"],
+      "description": "PM1 raw sensor value, µg/m³. Sentinels: -1000 (not fitted), -893, -892 (other faults)."
+    },
+    "pm1_slope": {
+      "type": ["number", "null"],
+      "description": "PM1 calibration multiplier. Calibrated value = prescale × slope + offset."
+    },
+    "pm1_offset": {
+      "type": ["number", "null"],
+      "description": "PM1 calibration offset, µg/m³."
+    },
+    "pm2_5_prescale": {
+      "type": ["number", "null"],
+      "description": "PM2.5 raw sensor value, µg/m³. Sentinel values as per pm1_prescale."
+    },
+    "pm2_5_slope": {"type": ["number", "null"]},
+    "pm2_5_offset": {"type": ["number", "null"]},
+    "pm4_prescale": {
+      "type": ["number", "null"],
+      "description": "PM4 raw sensor value, µg/m³. Sentinel values as per pm1_prescale."
+    },
+    "pm4_slope": {"type": ["number", "null"]},
+    "pm4_offset": {"type": ["number", "null"]},
+    "pm10_prescale": {
+      "type": ["number", "null"],
+      "description": "PM10 raw sensor value, µg/m³. Sentinel values as per pm1_prescale."
+    },
+    "pm10_slope": {"type": ["number", "null"]},
+    "pm10_offset": {"type": ["number", "null"]},
+    "pm_tpc_prescale": {
+      "type": ["number", "null"],
+      "description": "Total particle count raw value, particles/cm³. Sentinel values as per pm1_prescale."
+    },
+    "pm_tpc_slope": {"type": ["number", "null"]},
+    "pm_tpc_offset": {"type": ["number", "null"]},
+    "pm_total_prescale": {
+      "type": ["number", "null"],
+      "description": "Total PM raw sensor value, µg/m³. Sentinel values as per pm1_prescale."
+    },
+    "pm_total_slope": {"type": ["number", "null"]},
+    "pm_total_offset": {"type": ["number", "null"]},
+    "particle_p1": {
+      "type": ["integer", "null"],
+      "description": "Sensor parameter 1 (firmware-defined)."
+    },
+    "particle_p2": {
+      "type": ["integer", "null"],
+      "description": "Sensor parameter 2 (firmware-defined)."
+    },
+    "particle_p3": {
+      "type": ["integer", "null"],
+      "description": "Sensor parameter 3 (firmware-defined)."
+    },
+    "particleprotocol_version": {
+      "type": "string",
+      "description": "Particle sensor protocol version string (e.g. 'v3.1')."
+    },
+    "particle_modem_overlap": {
+      "type": ["boolean", "null"],
+      "description": "True if the particle measurement window overlapped with a modem transmission."
+    }
+  }
+}

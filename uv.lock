@@ -100,6 +100,7 @@ version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
+    { name = "jsonschema" },
     { name = "pandas" },
     { name = "prefect" },
     { name = "pydantic" },
@@ -110,7 +111,6 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "bandit" },
-    { name = "jsonschema" },
     { name = "pip-audit" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -121,6 +121,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "httpx", specifier = ">=0.27" },
+    { name = "jsonschema", specifier = ">=4" },
     { name = "pandas", specifier = ">=2.2" },
     { name = "prefect", specifier = ">=3.1" },
     { name = "pydantic", specifier = ">=2.7" },
@@ -131,7 +132,6 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "bandit", extras = ["toml"], specifier = ">=1.7" },
-    { name = "jsonschema", specifier = ">=4" },
     { name = "pip-audit", specifier = ">=2.7" },
     { name = "pytest", specifier = ">=8.2" },
     { name = "pytest-cov", specifier = ">=5" },
