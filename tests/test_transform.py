@@ -31,7 +31,7 @@ def test_clean_gas_blanks_sentinels(gas_batch):
 def test_clean_gas_sorted_and_has_metadata(gas_batch):
     cleaned = clean_readings(pd.DataFrame(gas_batch), Param.GAS)
     assert list(cleaned["reading_number"]) == [3256954, 3256955]
-    assert pd.api.types.is_datetime64_any_dtype(cleaned["reading_datestamp"])
+    assert str(cleaned["reading_datestamp"].dt.tz) == "UTC"
     assert "temperature_c" in cleaned.columns
     assert "temperature_f" in cleaned.columns
 
@@ -53,9 +53,9 @@ def test_clean_empty_returns_empty():
 
 
 def _cleaned_frame(rows: list[dict]) -> pd.DataFrame:
-    """Build a cleaned-style frame (datetime reading_datestamp) from row dicts."""
+    """Build a cleaned-style frame (UTC-aware reading_datestamp) from row dicts."""
     df = pd.DataFrame(rows)
-    df["reading_datestamp"] = pd.to_datetime(df["reading_datestamp"])
+    df["reading_datestamp"] = pd.to_datetime(df["reading_datestamp"], utc=True)
     return df
 
 
@@ -80,7 +80,7 @@ def test_resample_daily_averages_within_bin():
     )
     out = resample_daily(df)
     assert len(out) == 1
-    assert out.loc[0, "reading_datestamp"] == pd.Timestamp("2026-01-01")
+    assert out.loc[0, "reading_datestamp"] == pd.Timestamp("2026-01-01", tz="UTC")
     assert out.loc[0, "co"] == pytest.approx(15.0)
 
 
@@ -106,9 +106,9 @@ def test_resample_daily_empty_bins_are_nan_and_midnight_aligned():
     out = resample_daily(df).set_index("reading_datestamp")
     # Bins aligned to UTC midnight, spanning first to last reading.
     assert list(out.index) == [
-        pd.Timestamp("2026-01-01"),
-        pd.Timestamp("2026-01-02"),
-        pd.Timestamp("2026-01-03"),
+        pd.Timestamp("2026-01-01", tz="UTC"),
+        pd.Timestamp("2026-01-02", tz="UTC"),
+        pd.Timestamp("2026-01-03", tz="UTC"),
     ]
     assert out.loc["2026-01-01", "co"] == pytest.approx(10.0)
     # Day with no readings is NaN (no forward-fill).
