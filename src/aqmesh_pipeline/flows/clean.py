@@ -16,6 +16,7 @@ from ..config import Settings, get_settings
 from ..metadata import build_metadata
 from ..models import Asset, Param
 from ..storage import (
+    assets_path,
     clean_csv_path,
     clean_metadata_path,
     load_assets,
@@ -85,14 +86,30 @@ def clean_data(settings: Settings | None = None, resample: bool = True) -> list[
     results: list[dict] = []
 
     logger.info("raw_dir: %s (exists=%s)", settings.raw_dir, settings.raw_dir.exists())
-    if not settings.raw_dir.exists():
-        logger.warning("raw_dir does not exist — has ingest run successfully yet?")
+
+    assets = load_assets(settings)
+    if not assets and assets_path(settings).exists():
+        raise RuntimeError(
+            "Asset registry (assets.json) exists but is empty — the API returned no pods. "
+            "Check credentials and re-run the metadata/ingest stages."
+        )
+    if assets:
+        location_numbers = sorted(assets.keys())
+        logger.info("Processing %d location(s) from asset registry.", len(location_numbers))
+    elif settings.raw_dir.exists():
+        location_numbers = sorted(
+            int(d.name.split("=", 1)[1]) for d in settings.raw_dir.glob("location=*")
+        )
+        logger.info(
+            "No asset registry found; discovered %d location(s) from raw store.",
+            len(location_numbers),
+        )
+    else:
+        logger.warning("raw_dir does not exist and no asset registry found — has ingest run?")
         logger.info("Clean complete: wrote 0 CSV file(s).")
         return results
 
-    assets = load_assets(settings)
-    for loc_dir in sorted(settings.raw_dir.glob("location=*")):
-        location_number = int(loc_dir.name.split("=", 1)[1])
+    for location_number in location_numbers:
         asset = assets.get(location_number)
         for param in (Param.GAS, Param.PARTICLE):
             results.append(clean_location_param(settings, location_number, param, asset, resample))

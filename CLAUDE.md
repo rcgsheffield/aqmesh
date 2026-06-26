@@ -13,7 +13,8 @@ uv run pytest tests/test_flows.py  # single test file
 uv run pytest -k test_ingest   # single test by name
 
 # Run flows locally (no Prefect server needed; uses test API by default):
-uv run aqmesh pipeline         # ingest + clean
+uv run aqmesh pipeline         # metadata + ingest + clean
+uv run aqmesh metadata         # sync location/sensor metadata; write info.json per pod
 uv run aqmesh ingest           # download raw data only
 uv run aqmesh clean            # rebuild CSVs from raw store
 uv run aqmesh check            # health check: auth, pods, server freshness + notices
@@ -27,7 +28,7 @@ Pre-commit hooks keep `uv.lock` in sync — install once with `pre-commit instal
 
 ## Architecture
 
-Two-stage pipeline: **ingest** (download from the AQMesh API → `data/raw/`) and **clean** (transform → `data/clean/`), run independently or together via the parent `pipeline` flow. Each (location, param) pair is a separate Prefect task.
+Three-stage pipeline: **metadata** (fetch location/sensor registry from the API → `data/state/assets.json` + `data/clean/location=<n>/info.json`), **ingest** (download raw readings → `data/raw/`), and **clean** (transform → `data/clean/`). All three run together via the parent `pipeline` flow. Each (location, param) pair in ingest/clean is a separate Prefect task.
 
 Non-obvious invariants:
 - Raw files are **append-only and never modified**. The clean step always rebuilds from scratch.
