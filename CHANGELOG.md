@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.3.0](https://github.com/rcgsheffield/aqmesh/compare/v0.2.0...v0.3.0) (2026-06-26)
+
+
+### Features
+
+* **clean:** add metadata sidecar for clean CSVs ([#58](https://github.com/rcgsheffield/aqmesh/issues/58)) ([#85](https://github.com/rcgsheffield/aqmesh/issues/85)) ([ff63feb](https://github.com/rcgsheffield/aqmesh/commit/ff63feb836b6381a605fa7a37d1c8de882c68872))
+* **csvw:** generate CSVW descriptor alongside each cleaned CSV ([#105](https://github.com/rcgsheffield/aqmesh/issues/105)) ([44d09c1](https://github.com/rcgsheffield/aqmesh/commit/44d09c196c3d9352f60a44dbf46b8c4bbdc83776))
+* implement daily resampling of cleaned sensor data ([#99](https://github.com/rcgsheffield/aqmesh/issues/99)) ([4462b64](https://github.com/rcgsheffield/aqmesh/commit/4462b641ef077e84306db1a5f4192f759c71394b))
+* **ingest:** write Frictionless datapackage.yaml to raw store ([#100](https://github.com/rcgsheffield/aqmesh/issues/100)) ([bb9b093](https://github.com/rcgsheffield/aqmesh/commit/bb9b093d2ae5a50cbe5bd16922a4132c74ae0913))
+* **pipeline:** add metadata sync step so 404 locations appear in output ([#94](https://github.com/rcgsheffield/aqmesh/issues/94)) ([b2ae596](https://github.com/rcgsheffield/aqmesh/commit/b2ae59687cae4a54c6bc1f2a7f638eb6a62e2680))
+* **pipeline:** write README.txt to data root on each run ([#104](https://github.com/rcgsheffield/aqmesh/issues/104)) ([24075b0](https://github.com/rcgsheffield/aqmesh/commit/24075b0e4374df5c0afe26d9b742cc0d121594ea))
+* **resample:** add n_readings per-bucket sample count ([#102](https://github.com/rcgsheffield/aqmesh/issues/102)) ([cd76af6](https://github.com/rcgsheffield/aqmesh/commit/cd76af6f4afe01e0947141174a63f1a853126a0a))
+
+
+### Bug Fixes
+
+* **ci:** skip lock-check on release-please branches ([#98](https://github.com/rcgsheffield/aqmesh/issues/98)) ([2317e96](https://github.com/rcgsheffield/aqmesh/commit/2317e96aaefac9cf055d30a666861d5a21c9d1e5)), closes [#91](https://github.com/rcgsheffield/aqmesh/issues/91)
+* emit temperature_c from cleaned output ([#96](https://github.com/rcgsheffield/aqmesh/issues/96)) ([86b30ef](https://github.com/rcgsheffield/aqmesh/commit/86b30ef70dc7b254139162ad744d9f0de3f565d8))
+* pin UTC timezone for reading_datestamp ([#82](https://github.com/rcgsheffield/aqmesh/issues/82)) ([#101](https://github.com/rcgsheffield/aqmesh/issues/101)) ([d35dd62](https://github.com/rcgsheffield/aqmesh/commit/d35dd6220037fbbe5e754072ca13c13c1fe50e9f))
+
+
+### Documentation
+
+* **claude-md:** document CI checks and PR test plan scope ([#103](https://github.com/rcgsheffield/aqmesh/issues/103)) ([5c5644c](https://github.com/rcgsheffield/aqmesh/commit/5c5644c4a0d93edaf1adb16d572d7b079264854b))
+* **service-management:** move SSH tunnel section earlier, add ~/.ssh/config instructions ([#95](https://github.com/rcgsheffield/aqmesh/issues/95)) ([4abbb73](https://github.com/rcgsheffield/aqmesh/commit/4abbb736728479754c622cf7538be805c6aca958))
+
 ## [0.2.0](https://github.com/rcgsheffield/aqmesh/compare/v0.1.4...v0.2.0) (2026-06-26)
 
 
