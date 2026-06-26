@@ -40,8 +40,79 @@ def settings(tmp_path) -> Settings:
 @pytest.fixture
 def assets_payload() -> list[dict]:
     return [
-        {"location_number": 510, "serial_number": 2410149, "firmware_version": "v3.22"},
+        {
+            "location_number": 510,
+            "location_name": "Sheffield City Centre",
+            "serial_number": 2410149,
+            "firmware_version": "v3.22",
+            "location_latitude": 53.38,
+            "location_longitude": -1.48,
+        },
         {"location_number": 915, "serial_number": 2410103, "firmware_version": "v5.6"},
+    ]
+
+
+@pytest.fixture
+def serverping_payload() -> dict:
+    """Server health snapshot modelled on manual 4.16."""
+    return {
+        "server_time": "2026-06-19T09:02:42.417",
+        "last_sequence_number": 106649,
+        "most_recent_reading": "2026-06-19T08:57:00",
+        "last_communication": "2026-06-19T09:00:47.193",
+        "most_recent_processed": "2026-06-19T09:01:23.746",
+        "version": "Vn 0.9",
+    }
+
+
+@pytest.fixture
+def notifications_payload() -> list[dict]:
+    """System notifications modelled on manual 4.17 (one empty entry to be filtered)."""
+    return [
+        {"system_information": "Planned downtime 2026-06-20 02:00-03:00 UTC"},
+        {"system_information": ""},
+    ]
+
+
+@pytest.fixture
+def sensor_detail_payload() -> list[dict]:
+    """Two sensors modelled on manual 4.20: one healthy, one due for replacement."""
+    return [
+        {
+            "serial_number": 2410103,
+            "sensor_serial_number": "202641142",
+            "sensor_type_name": "NO2",
+            "sensor_status_name": "Reading",
+            "pod_status_name": "Active",
+            "age_in_months": 8,
+            "expiry_date": "2027-01-16T00:00:00",
+            "replacement_needed": None,
+        },
+        {
+            "serial_number": 2410103,
+            "sensor_serial_number": "204641031",
+            "sensor_type_name": "O3",
+            "sensor_status_name": "Reading",
+            "pod_status_name": "Active",
+            "age_in_months": 26,
+            "expiry_date": "2020-03-04T00:00:00",
+            "replacement_needed": "Replacement of the O3 electro-chemical sensor is recommended.",
+        },
+    ]
+
+
+@pytest.fixture
+def failed_sensor_payload() -> list[dict]:
+    """A failed sensor modelled on manual 4.8."""
+    return [
+        {
+            "sensor_serial_number": 11,
+            "pod_serial_number": 704150,
+            "sensor_type": "SO2",
+            "fail_type": "Fail criteria exceeded",
+            "fail_date": "2026-02-26T09:00:00",
+            "status": "Sensor Allocated",
+        }
     ]
 
 
@@ -56,6 +127,7 @@ def gas_batch() -> list[dict]:
         "co_prescaled": 444.39,
         "co_slope": 1.0574,
         "co_offset": -76.2663,
+        "co_units": "ppb",
         # so2 is a valid (slightly negative) reading, not a sentinel.
         "so2_state": "Reading",
         "so2_prescaled": -1.09,
@@ -71,6 +143,7 @@ def gas_batch() -> list[dict]:
         "h2s_prescaled": -1000.00,
         "h2s_slope": None,
         "h2s_offset": None,
+        "temperature_c": 12.6,
         "temperature_f": 54.7,
         "pressure": 1024.5,
         "humidity": 69.5,
@@ -86,15 +159,19 @@ def gas_batch() -> list[dict]:
 
 
 @pytest.fixture
-def seed_raw(settings, gas_batch, particle_batch):
-    """Populate the raw store for location 510 (gas + particle) and return settings."""
-    from aqmesh_pipeline.models import Param
-    from aqmesh_pipeline.storage import write_raw_batch
+def seed_raw(settings, gas_batch, particle_batch, assets_payload):
+    """Populate the raw store for location 510 (gas + particle) and return settings.
+
+    Also persists an asset snapshot so the clean stage can attach location provenance.
+    """
+    from aqmesh_pipeline.models import Asset, Param
+    from aqmesh_pipeline.storage import save_assets, write_raw_batch
 
     write_raw_batch(settings, 510, Param.GAS, gas_batch, pulled_at="20260101T000000Z", seq=0)
     write_raw_batch(
         settings, 510, Param.PARTICLE, particle_batch, pulled_at="20260101T000000Z", seq=0
     )
+    save_assets(settings, [Asset(**a) for a in assets_payload])
     return settings
 
 

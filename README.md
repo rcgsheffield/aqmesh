@@ -3,19 +3,25 @@
 
 # AQMesh Data Pipeline
 
-Outdoor air quality sensors data pipeline for the [AQMesh](https://www.aqmesh.com) platform.
+Outdoor air quality sensors data pipeline for the [AQMesh](https://www.aqmesh.com) [data platform](https://www.aqmeshdata.net/).
 
 It downloads all raw readings from the AQMesh API to a shared storage volume and cleans them into
 research-ready CSV. Orchestrated with [Prefect 3](https://docs.prefect.io/v3/get-started).
 
-```
-AQMesh API ──► client.py ──► flows/ingest.py ──► raw/   (append-only JSON)
-                                                      │
-                                                      ▼
-                                         flows/clean.py ──► clean/ (calibrated CSVs)
+```mermaid
+graph LR
+    %% Nodes & Data Flow
+    API["AQMesh API"] -->|Fetch| PY1["client.py"]
+    PY1 -->|Pass data| PY2["flows/ingest.py"]
+    PY2 -->|Append-only JSON| RAW[("raw/")]
 
-Scheduled hourly at :06 (Europe/London) by Prefect 3
-CLI: aqmesh pipeline | ingest | clean | check
+    RAW -->|Read| PY3["flows/clean.py"]
+    PY3 -->|Calibrated CSVs| CLEAN[("clean/")]
+
+    %% Styling & Formatting
+    style API fill:#f9f,stroke:#333,stroke-width:2px
+    style RAW fill:#f96,stroke:#333,stroke-width:2px
+    style CLEAN fill:#9f9,stroke:#333,stroke-width:2px
 ```
 
 ## Documentation
@@ -40,7 +46,12 @@ uv run pytest                 # tests
 uv run aqmesh ingest          # download raw data only
 uv run aqmesh clean           # rebuild CSVs from the raw store
 uv run aqmesh pipeline        # ingest + clean (default)
-uv run aqmesh clean --no-resample   # skip the 5-minute resampled output
+uv run aqmesh clean --no-resample   # skip the daily resampled output
+
+# Read-only diagnostics (make no changes):
+uv run aqmesh check           # auth + list pods + server freshness/notices
+uv run aqmesh ping            # server health & data freshness (no credentials needed)
+uv run aqmesh sensors         # fleet sensor age/expiry/failures
 ```
 
 `clean` (and `pipeline`) write the per-reading CSVs to `clean/` and, by default, a 5-minute

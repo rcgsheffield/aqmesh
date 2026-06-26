@@ -222,4 +222,4 @@ __marimo__/
 .prefect/
 
 # Vendor API reference docs (kept locally for reference only)
-AQMesh-API-instructions-*.pdf
+*.pdf

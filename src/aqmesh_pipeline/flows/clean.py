@@ -8,26 +8,36 @@ resampled CSV per location/param under ``resampled/``.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from prefect import flow, get_run_logger, task
 
 from ..config import Settings, get_settings
-from ..models import Param
+from ..metadata import build_metadata
+from ..models import Asset, Param
 from ..storage import (
     clean_csv_path,
+    clean_metadata_path,
+    load_assets,
     read_raw_readings,
     resampled_csv_path,
     write_clean_csv,
+    write_clean_metadata,
 )
 from ..transform import clean_readings, resample_daily
 
 
 @task(retries=2, retry_delay_seconds=10)
 def clean_location_param(
-    settings: Settings, location_number: int, param: Param, resample: bool = True
+    settings: Settings,
+    location_number: int,
+    param: Param,
+    asset: Asset | None = None,
+    resample: bool = True,
 ) -> dict:
-    """Clean one location/param and write its CSV. No-op if there is no raw data.
+    """Clean one location/param, write its CSV and metadata sidecar. No-op if no raw data.
 
-    When ``resample`` is true, also writes a daily resampled CSV under the
+    When ``resample`` is true (the default), also writes a daily resampled CSV under the
     separate ``resampled/`` tree.
     """
     raw = read_raw_readings(settings, location_number, param)
@@ -38,10 +48,15 @@ def clean_location_param(
             "rows": 0,
             "csv": None,
             "resampled_csv": None,
+            "metadata": None,
         }
     cleaned = clean_readings(raw, param)
     path = clean_csv_path(settings, location_number, param)
     write_clean_csv(cleaned, path)
+
+    metadata = build_metadata(cleaned, raw, param, asset, settings, datetime.now(UTC))
+    meta_path = clean_metadata_path(settings, location_number, param)
+    write_clean_metadata(metadata, meta_path)
 
     resampled_path = None
     if resample:
@@ -54,6 +69,7 @@ def clean_location_param(
         "rows": len(cleaned),
         "csv": str(path),
         "resampled_csv": str(resampled_path) if resampled_path else None,
+        "metadata": str(meta_path),
     }
 
 
@@ -74,10 +90,12 @@ def clean_data(settings: Settings | None = None, resample: bool = True) -> list[
         logger.info("Clean complete: wrote 0 CSV file(s).")
         return results
 
+    assets = load_assets(settings)
     for loc_dir in sorted(settings.raw_dir.glob("location=*")):
         location_number = int(loc_dir.name.split("=", 1)[1])
+        asset = assets.get(location_number)
         for param in (Param.GAS, Param.PARTICLE):
-            results.append(clean_location_param(settings, location_number, param, resample))
+            results.append(clean_location_param(settings, location_number, param, asset, resample))
 
     written = sum(1 for r in results if r["csv"])
     resampled_written = sum(1 for r in results if r["resampled_csv"])
