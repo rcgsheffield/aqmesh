@@ -35,9 +35,42 @@ jobs:
           curl -sL "https://github.com/${{ github.repository }}/archive/refs/tags/${TAG}.tar.gz" > "data/${ARCHIVE_NAME}.tar.gz"
 
       - name: Upload to ORDA (Figshare)
-        uses: figshare/github-upload-action@v1.1
-        with:
+        env:
           FIGSHARE_TOKEN: ${{ secrets.FIGSHARE_TOKEN }}
-          FIGSHARE_ENDPOINT: 'https://api.figshare.com/v2'
           FIGSHARE_ARTICLE_ID: ${{ vars.FIGSHARE_ARTICLE_ID }}
-          DATA_DIR: 'data'
+          FIGSHARE_ENDPOINT: https://api.figshare.com/v2
+        run: |
+          for FILE in data/*; do
+            NAME=$(basename "$FILE")
+            SIZE=$(wc -c < "$FILE")
+            MD5=$(md5sum "$FILE" | cut -d' ' -f1)
+
+            # 1. Initiate upload
+            LOCATION=$(curl -sf \
+              -H "Authorization: token $FIGSHARE_TOKEN" \
+              -H "Content-Type: application/json" \
+              -X POST "${FIGSHARE_ENDPOINT}/account/articles/${FIGSHARE_ARTICLE_ID}/files" \
+              -d "{\"name\":\"${NAME}\",\"size\":${SIZE},\"md5\":\"${MD5}\"}" \
+              | jq -r '.location')
+
+            # 2. Get upload URL
+            UPLOAD_URL=$(curl -sf \
+              -H "Authorization: token $FIGSHARE_TOKEN" \
+              "$LOCATION" | jq -r '.upload_url')
+
+            # 3. Upload parts (single part for typical release archives)
+            PARTS=$(curl -sf "$UPLOAD_URL")
+            PART_COUNT=$(echo "$PARTS" | jq '.parts | length')
+            for i in $(seq 0 $((PART_COUNT - 1))); do
+              PART_URL=$(echo "$PARTS" | jq -r ".parts[$i].uploadUrl")
+              PART_FROM=$(echo "$PARTS" | jq -r ".parts[$i].startOffset")
+              PART_TO=$(echo "$PARTS" | jq -r ".parts[$i].endOffset")
+              dd if="$FILE" bs=1 skip="$PART_FROM" count=$((PART_TO - PART_FROM + 1)) 2>/dev/null \
+                | curl -sf -X PUT "$PART_URL" --data-binary @-
+            done
+
+            # 4. Complete upload
+            curl -sf \
+              -H "Authorization: token $FIGSHARE_TOKEN" \
+              -X POST "${LOCATION}/complete"
+          done
