@@ -94,6 +94,8 @@ Raw files are never modified or deleted — the clean step always rebuilds from 
   can decide what to use: numeric columns (pollutants and environmental/housekeeping readings alike)
   are averaged, while non-numeric columns (e.g. `reading_status`) are aggregated to the `;`-joined
   distinct values in each bin. `location_number` and `pod_serial_number` are kept as leading identity
-  columns. The per-reading `clean/` CSVs are always produced as well, so raw cadence stays
-  accessible. Resampling runs by default; `aqmesh clean --no-resample` (and
-  `aqmesh pipeline --no-resample`) skips the `resampled/` output.
+  columns, followed by `n_readings` — an integer count of the sensor observations that fell into
+  each bin (0 for empty bins, not NaN), which researchers can use to filter out low-confidence
+  daily means or apply coverage weighting. The per-reading `clean/` CSVs are always produced as
+  well, so raw cadence stays accessible. Resampling runs by default; `aqmesh clean --no-resample`
+  (and `aqmesh pipeline --no-resample`) skips the `resampled/` output.
