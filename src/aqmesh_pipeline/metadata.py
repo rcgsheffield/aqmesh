@@ -27,7 +27,8 @@ if TYPE_CHECKING:
 # Each item below is also marked with an inline `TODO(#58)`. Until confirmed, the
 # emitted metadata reflects best-guess values:
 #   1. reading_status legend — only "OK" is seen in sample data; full set unknown.
-#   2. pm_tpc units — assumed a particle count (count/cm3), NOT µg/m³ like other PM.
+#   2. pm_tpc units — confirmed ug/m3 (mass concentration, same as other PM channels);
+#      empirical mean ~6.1 rules out count/cm3 (ambient counts are hundreds–thousands/cm3).
 #   3. eo species — assumed ethylene oxide.
 #   4. temperature_f — assumed Fahrenheit (field name + sample values support this).
 # ---------------------------------------------------------------------------
@@ -53,7 +54,7 @@ COLUMN_DESCRIPTIONS: dict[str, str] = {
     "pm2_5": "Particulate matter <2.5 µm",
     "pm4": "Particulate matter <4 µm",
     "pm10": "Particulate matter <10 µm",
-    "pm_tpc": "Total particle count",
+    "pm_tpc": "Total particle concentration (all size fractions)",
     "pm_total": "Total particulate matter",
     # Environmental / housekeeping passthrough columns.
     "temperature_f": "Air temperature",
@@ -65,14 +66,13 @@ COLUMN_DESCRIPTIONS: dict[str, str] = {
 }
 
 #: Units known statically (independent of the raw payload).
-# TODO(#58): confirm temperature_f is Fahrenheit, and that pm_tpc is a count
-# (count/cm3) rather than a mass concentration (ug/m3) like the other PM channels.
+# TODO(#58): confirm temperature_f is Fahrenheit.
 STATIC_UNITS: dict[str, str | None] = {
     "pm1": "ug/m3",
     "pm2_5": "ug/m3",
     "pm4": "ug/m3",
     "pm10": "ug/m3",
-    "pm_tpc": "count/cm3",
+    "pm_tpc": "ug/m3",
     "pm_total": "ug/m3",
     "temperature_f": "degF",
     "pressure": "mbar",
