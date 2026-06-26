@@ -73,6 +73,15 @@ def clean_metadata_path(settings: Settings, location_number: int, param: Param) 
     return clean_csv_path(settings, location_number, param).with_suffix(".metadata.json")
 
 
+def clean_csvw_path(settings: Settings, location_number: int, param: Param) -> Path:
+    """CSVW per-file descriptor path next to the clean CSV (issue #92).
+
+    Follows the W3C CSVW naming convention: ``<csv-url>-metadata.json``.
+    """
+    csv = clean_csv_path(settings, location_number, param)
+    return csv.with_name(csv.name + "-metadata.json")
+
+
 def pointers_path(settings: Settings) -> Path:
     return settings.state_dir / POINTERS_FILENAME
 
@@ -136,6 +145,14 @@ def write_clean_metadata(metadata: dict, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".metadata.json.tmp")
     tmp.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    tmp.replace(path)
+
+
+def write_clean_csvw(csvw: dict, path: Path) -> None:
+    """Write the CSVW Table descriptor for a clean CSV (issue #92)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(csvw, indent=2, ensure_ascii=False), encoding="utf-8")
     tmp.replace(path)
 
 
