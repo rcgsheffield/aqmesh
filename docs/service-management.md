@@ -39,6 +39,68 @@ sudo systemctl restart prefect-worker
 - **Both** — after a code update (`bootstrap.sh` handles this automatically; only do it manually
   if you need to force a restart without re-running the full provisioning script).
 
+## Accessing the web UI remotely (SSH tunnel)
+
+Prefect 3 ships a built-in web UI served by `prefect-server` at `http://127.0.0.1:4200`. It lets
+you watch flow and task runs, read their logs, inspect schedules and deployments, browse work
+pools, and trigger ad-hoc runs from a browser.
+
+Because the server binds to `127.0.0.1` only and is not exposed publicly, you must forward the
+port over SSH to reach the UI from your own machine.
+
+### SSH config
+
+Add a host entry to `~/.ssh/config` on your local machine so the tunnel is created automatically
+every time you connect:
+
+```
+Host aqmesh
+    HostName <vm-host>
+    User <your-username>
+    LocalForward 4200 127.0.0.1:4200
+```
+
+Then connect as normal:
+
+```bash
+ssh aqmesh
+# open http://127.0.0.1:4200 in your local browser while the session is active
+```
+
+The tunnel persists for the lifetime of the shell session. To open the UI without an interactive
+shell, use the `-N` flag:
+
+```bash
+ssh -N aqmesh   # Ctrl-C to close
+```
+
+**Without a config entry** — the equivalent one-liner if you prefer not to edit `~/.ssh/config`:
+
+```bash
+ssh -L 4200:127.0.0.1:4200 user@vm-host
+```
+
+No change to the deployment is needed; the server stays unexposed.
+
+### What the UI shows
+
+| Area | What you get |
+| --- | --- |
+| **Dashboard** | Overview of recent flow runs with a run-history timeline and filters (date range, state, flow name, deployment, tags). |
+| **Flow Runs** | Every run of `aqmesh-pipeline` and its sub-flows (`ingest_raw`, `clean_data`) with state, duration, logs, task runs, and sub-flow runs. |
+| **Deployments** | The `aqmesh-pipeline/hourly` deployment and its `6 * * * *` schedule (defined in [`prefect.yaml`](../prefect.yaml)). |
+| **Work Pools** | The `process`-type `aqmesh-pool` and the worker polling it. |
+
+From a deployment's page you can trigger a run on demand — the UI equivalent of the
+`prefect deployment run aqmesh-pipeline/hourly` CLI command.
+
+### Optional: `PREFECT_UI_URL`
+
+URLs that Prefect prints in logs or the CLI default to `http://127.0.0.1:4200`. If you want those
+links to reflect how you actually reach the UI (e.g. via a tunnel or reverse proxy), set
+`PREFECT_UI_URL` accordingly. It is not required for this setup. See the
+[settings reference](https://docs.prefect.io/v3/develop/settings-ref).
+
 ## Viewing logs
 
 ### Live tail
@@ -110,41 +172,6 @@ worker logs and look for poll activity:
 ```bash
 sudo journalctl -fu prefect-worker | grep -i poll
 ```
-
-## Accessing the web UI remotely (SSH tunnel)
-
-Prefect 3 ships a built-in web UI served by `prefect-server` at `http://127.0.0.1:4200`. It lets
-you watch flow and task runs, read their logs, inspect schedules and deployments, browse work
-pools, and trigger ad-hoc runs from a browser.
-
-Because the server binds to `127.0.0.1` only and is not exposed publicly, forward the port over
-SSH to reach the UI from your own machine:
-
-```bash
-ssh -L 4200:127.0.0.1:4200 user@vm-host
-# then open http://127.0.0.1:4200 in your local browser
-```
-
-No change to the deployment is needed; the server stays unexposed.
-
-### What the UI shows
-
-| Area | What you get |
-| --- | --- |
-| **Dashboard** | Overview of recent flow runs with a run-history timeline and filters (date range, state, flow name, deployment, tags). |
-| **Flow Runs** | Every run of `aqmesh-pipeline` and its sub-flows (`ingest_raw`, `clean_data`) with state, duration, logs, task runs, and sub-flow runs. |
-| **Deployments** | The `aqmesh-pipeline/hourly` deployment and its `6 * * * *` schedule (defined in [`prefect.yaml`](../prefect.yaml)). |
-| **Work Pools** | The `process`-type `aqmesh-pool` and the worker polling it. |
-
-From a deployment's page you can trigger a run on demand — the UI equivalent of the
-`prefect deployment run aqmesh-pipeline/hourly` CLI command.
-
-### Optional: `PREFECT_UI_URL`
-
-URLs that Prefect prints in logs or the CLI default to `http://127.0.0.1:4200`. If you want those
-links to reflect how you actually reach the UI (e.g. via a tunnel or reverse proxy), set
-`PREFECT_UI_URL` accordingly. It is not required for this setup. See the
-[settings reference](https://docs.prefect.io/v3/develop/settings-ref).
 
 ## Scheduled run management
 
