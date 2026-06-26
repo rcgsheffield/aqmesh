@@ -4,14 +4,18 @@ from __future__ import annotations
 
 import json
 
+import yaml
+
 from aqmesh_pipeline.models import Param
 from aqmesh_pipeline.storage import (
     load_pointers,
+    raw_store_descriptor_path,
     read_raw_readings,
     save_pointers,
     update_pointer,
     write_location_info,
     write_raw_batch,
+    write_raw_store_descriptor,
 )
 
 
@@ -76,3 +80,19 @@ def test_pointers_round_trip(settings):
     loaded = load_pointers(settings)
     assert loaded["510"]["gas"]["last_reading_number"] == 3256955
     assert loaded["510"]["gas"]["new_readings"] == 2
+
+
+def test_raw_store_descriptor_path(settings):
+    assert raw_store_descriptor_path(settings) == settings.raw_dir / "datapackage.yaml"
+
+
+def test_write_raw_store_descriptor_atomic(settings):
+    path = raw_store_descriptor_path(settings)
+    payload = {"name": "aqmesh-raw", "resources": []}
+    write_raw_store_descriptor(payload, path)
+
+    assert path.exists()
+    assert not path.with_suffix(".yaml.tmp").exists()
+    loaded = yaml.safe_load(path.read_text())
+    assert loaded["name"] == "aqmesh-raw"
+    assert loaded["resources"] == []

@@ -153,6 +153,7 @@ def clean_readings(df: pd.DataFrame, param: Param) -> pd.DataFrame:
 #: Identity columns that are constant within one location/param frame and are
 #: carried through resampling unchanged rather than averaged.
 _IDENTITY_COLS = ("location_number", "pod_serial_number")
+_SEQUENCE_COLS: frozenset[str] = frozenset({"reading_number"})
 
 
 def _join_distinct(values: pd.Series) -> object:
@@ -203,6 +204,11 @@ def resample_daily(df: pd.DataFrame, freq: str = "1D") -> pd.DataFrame:
     if df.empty:
         return df.reindex(columns=[*df.columns, "n_readings"])
 
+    df = df.dropna(subset=["reading_datestamp"])
+    if df.empty:
+        return df
+
+    df = df.drop(columns=list(_SEQUENCE_COLS), errors="ignore")
     identity = {col: df[col].iloc[0] for col in _IDENTITY_COLS if col in df.columns}
     indexed = df.set_index("reading_datestamp").sort_index()
 

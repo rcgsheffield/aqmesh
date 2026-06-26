@@ -21,6 +21,7 @@ import logging
 from pathlib import Path
 
 import pandas as pd
+from ruamel.yaml import YAML
 
 from .config import Settings
 from .models import Asset, Param
@@ -71,6 +72,11 @@ def resampled_csv_path(settings: Settings, location_number: int, param: Param) -
 def clean_metadata_path(settings: Settings, location_number: int, param: Param) -> Path:
     """Sidecar data-dictionary path sitting next to the clean CSV (issue #58)."""
     return clean_csv_path(settings, location_number, param).with_suffix(".metadata.json")
+
+
+def raw_store_descriptor_path(settings: Settings) -> Path:
+    """Frictionless datapackage descriptor for the entire raw store (issue #69)."""
+    return settings.raw_dir / "datapackage.yaml"
 
 
 def pointers_path(settings: Settings) -> Path:
@@ -136,6 +142,17 @@ def write_clean_metadata(metadata: dict, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".metadata.json.tmp")
     tmp.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    tmp.replace(path)
+
+
+def write_raw_store_descriptor(descriptor: dict, path: Path) -> None:
+    """Write the Frictionless datapackage descriptor for the raw store atomically (issue #69)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".yaml.tmp")
+    yaml = YAML()
+    yaml.default_flow_style = False
+    with tmp.open("w", encoding="utf-8") as f:
+        yaml.dump(descriptor, f)
     tmp.replace(path)
 
 

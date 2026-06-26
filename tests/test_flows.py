@@ -7,14 +7,15 @@ from __future__ import annotations
 
 import json
 import re
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import httpx
 import pandas as pd
 import pytest
 import respx
+import yaml
 
-from aqmesh_pipeline.flows.clean import clean_data
+from aqmesh_pipeline.flows.clean import clean_data, clean_location_param
 from aqmesh_pipeline.flows.ingest import ingest_raw
 from aqmesh_pipeline.flows.metadata import sync_location_metadata
 from aqmesh_pipeline.flows.pipeline import pipeline
@@ -26,6 +27,7 @@ from aqmesh_pipeline.storage import (
     load_assets,
     load_pointers,
     raw_param_dir,
+    raw_store_descriptor_path,
     resampled_csv_path,
     save_assets,
 )
@@ -86,6 +88,18 @@ def test_ingest_raw_writes_data_and_pointers(settings, assets_payload, gas_batch
     assert assets_path(settings).exists()
     snapshot = {a["location_number"] for a in json.loads(assets_path(settings).read_text())}
     assert snapshot == {510, 915}
+
+    # Raw store descriptor written alongside the data volume.
+    desc_path = raw_store_descriptor_path(settings)
+    assert desc_path.exists()
+    desc = yaml.safe_load(desc_path.read_text())
+    assert desc["name"] == "aqmesh-raw"
+    resources = {r["name"]: r for r in desc["resources"]}
+    assert "raw-gas-510" in resources
+    assert resources["raw-gas-510"]["last_reading_number"] == 3256955
+    assert resources["raw-gas-510"]["location_name"] == "Sheffield City Centre"
+    assert resources["raw-gas-510"]["status_this_run"] == "ok"
+    assert resources["raw-gas-510"]["new_readings_this_run"] == len(gas_batch)
 
 
 @respx.mock
@@ -169,6 +183,103 @@ def test_ingest_raw_skips_404_locations(
 
 
 @respx.mock
+def test_descriptor_marks_404_pod_offline(settings, assets_payload, gas_batch, particle_batch):
+    """Previously-live pod that now 404s must appear in the descriptor with
+    status_this_run='not_found', not silently retain a stale last_reading_number."""
+    from aqmesh_pipeline.storage import save_pointers
+
+    # Pre-seed pointers as if location 915 had prior successful readings.
+    save_pointers(
+        settings,
+        {
+            "915": {
+                "gas": {
+                    "last_reading_number": 99999,
+                    "last_datestamp": "2025-01-01T00:00:00",
+                    "new_readings": 10,
+                },
+                "particle": {
+                    "last_reading_number": 99998,
+                    "last_datestamp": "2025-01-01T00:00:00",
+                    "new_readings": 8,
+                },
+            }
+        },
+    )
+    _allow_prefect()
+    respx.post(f"{settings.base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"token": "tok"})
+    )
+    respx.get(f"{settings.base_url}/Pods/Assets_V1").mock(
+        return_value=httpx.Response(200, json=assets_payload)
+    )
+    for param in (Param.GAS, Param.PARTICLE):
+        respx.get(f"{settings.base_url}/LocationData/Next/510/{int(param)}/01/1").mock(
+            side_effect=[
+                httpx.Response(200, json=gas_batch if param == Param.GAS else particle_batch),
+                httpx.Response(204),
+            ]
+        )
+        respx.get(f"{settings.base_url}/LocationData/Next/915/{int(param)}/01/1").mock(
+            return_value=httpx.Response(404)
+        )
+
+    ingest_raw(settings)
+
+    desc = yaml.safe_load(raw_store_descriptor_path(settings).read_text())
+    resources = {r["name"]: r for r in desc["resources"]}
+
+    # Offline pod must signal its status clearly.
+    assert resources["raw-gas-915"]["status_this_run"] == "not_found"
+    assert resources["raw-gas-915"]["new_readings_this_run"] == 0
+    # Stale pointer is preserved (not advanced by the failed poll).
+    assert resources["raw-gas-915"]["last_reading_number"] == 99999
+
+    # Healthy pod still shows ok.
+    assert resources["raw-gas-510"]["status_this_run"] == "ok"
+
+
+@respx.mock
+def test_descriptor_uses_fresh_assets_not_stale_snapshot(
+    settings, assets_payload, gas_batch, particle_batch
+):
+    """Descriptor must reflect the freshly-fetched assets, not a stale disk snapshot."""
+    # Seed stale assets.json with a wrong location name.
+    stale = [dict(a, location_name="STALE NAME") for a in assets_payload]
+    assets_path(settings).parent.mkdir(parents=True, exist_ok=True)
+    assets_path(settings).write_text(json.dumps(stale))
+
+    _mock_api(settings.base_url, assets_payload, gas_batch, particle_batch)
+    ingest_raw(settings)
+
+    desc = yaml.safe_load(raw_store_descriptor_path(settings).read_text())
+    resources = {r["name"]: r for r in desc["resources"]}
+    assert resources["raw-gas-510"]["location_name"] == "Sheffield City Centre"
+
+
+@respx.mock
+def test_ingest_raw_continues_when_descriptor_write_fails(
+    settings, assets_payload, gas_batch, particle_batch, monkeypatch
+):
+    """A descriptor write failure must not prevent ingest from returning normally."""
+    _mock_api(settings.base_url, assets_payload, gas_batch, particle_batch)
+    monkeypatch.setattr(
+        "aqmesh_pipeline.flows.ingest.write_raw_store_descriptor",
+        Mock(side_effect=OSError("disk full")),
+    )
+
+    summary = ingest_raw(settings)
+
+    # Raw data and pointers are still written.
+    assert list(raw_param_dir(settings, 510, Param.GAS).glob("*.json"))
+    pointers = load_pointers(settings)
+    assert pointers["510"]["gas"]["new_readings"] == len(gas_batch)
+    # Descriptor was not written, but the flow still returned successfully.
+    assert not raw_store_descriptor_path(settings).exists()
+    assert summary["locations"] == 2
+
+
+@respx.mock
 def test_clean_data_writes_one_csv_per_param(seed_raw):
     _allow_prefect()
     results = clean_data(seed_raw)
@@ -218,6 +329,19 @@ def test_clean_data_no_resample_skips_resampled_csv(seed_raw):
 
 
 @respx.mock
+def test_clean_location_param_resample_failure_leaves_no_partial_output(seed_raw):
+    """If resample_daily raises, neither the clean CSV nor the metadata sidecar is written."""
+    _allow_prefect()
+    with (
+        patch("aqmesh_pipeline.flows.clean.resample_daily", side_effect=ValueError("boom")),
+        pytest.raises(ValueError),
+    ):
+        clean_location_param.fn(seed_raw, 510, Param.GAS, resample=True)
+
+    assert not clean_csv_path(seed_raw, 510, Param.GAS).exists()
+    assert not clean_metadata_path(seed_raw, 510, Param.GAS).exists()
+
+
 def test_reading_datestamp_serialised_as_iso(seed_raw):
     _allow_prefect()
     clean_data(seed_raw)

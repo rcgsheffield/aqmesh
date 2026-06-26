@@ -16,13 +16,16 @@ from prefect.cache_policies import NO_CACHE
 
 from ..client import AQMeshClient
 from ..config import Settings, get_settings
+from ..metadata import build_raw_store_descriptor
 from ..models import READING_DATESTAMP_FIELD, Param
 from ..storage import (
     load_pointers,
+    raw_store_descriptor_path,
     save_assets,
     save_pointers,
     update_pointer,
     write_raw_batch,
+    write_raw_store_descriptor,
 )
 
 
@@ -118,7 +121,7 @@ def ingest_raw(settings: Settings | None = None) -> dict:
         if not assets:
             logger.warning("No locations returned by the API — check environment/credentials.")
         for asset in assets:
-            for param in (Param.GAS, Param.PARTICLE):
+            for param in list(Param):
                 summary = ingest_location_param(
                     client, settings, asset.location_number, param, pulled_at
                 )
@@ -136,6 +139,19 @@ def ingest_raw(settings: Settings | None = None) -> dict:
                     )
 
     save_pointers(settings, pointers)
+
+    try:
+        descriptor = build_raw_store_descriptor(
+            assets={a.location_number: a for a in assets},
+            pointers=pointers,
+            summaries=summaries,
+            settings=settings,
+            generated_at=datetime.now(UTC),
+        )
+        write_raw_store_descriptor(descriptor, raw_store_descriptor_path(settings))
+    except Exception:
+        logger.warning("Failed to write raw store descriptor; skipping.", exc_info=True)
+
     total_new = sum(s["new_readings"] for s in summaries)
     failed = [s for s in summaries if s["status"] == "failed"]
     not_found = [s for s in summaries if s["status"] == "not_found"]
