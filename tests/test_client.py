@@ -235,3 +235,114 @@ def test_repeat_last_appends_non_default_version(settings, gas_batch):
     path = route.calls.last.request.url.path
     segments = path.split("/LocationData/Repeat/")[1].split("/")
     assert segments == ["510", "1", "01", "2"]
+
+
+# -- diagnostics / context endpoints -----------------------------------------
+
+
+@respx.mock
+def test_server_ping_needs_no_auth(settings, serverping_payload):
+    # No /Authenticate route registered — server_ping must not call it.
+    route = respx.get(f"{settings.base_url}/serverping").mock(
+        return_value=httpx.Response(200, json=serverping_payload)
+    )
+    with AQMeshClient(settings) as client:
+        ping = client.server_ping()
+
+    assert ping.version == "Vn 0.9"
+    assert ping.most_recent_reading == "2026-06-19T08:57:00"
+    # The request carried no Authorization header.
+    assert "authorization" not in route.calls.last.request.headers
+
+
+@respx.mock
+def test_system_notifications_filters_empty(settings, notifications_payload):
+    respx.post(f"{settings.base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"token": "tok"})
+    )
+    respx.get(f"{settings.base_url}/notification/system").mock(
+        return_value=httpx.Response(200, json=notifications_payload)
+    )
+    with AQMeshClient(settings) as client:
+        notices = client.get_system_notifications()
+
+    assert notices == ["Planned downtime 2026-06-20 02:00-03:00 UTC"]
+
+
+@respx.mock
+def test_system_notifications_empty_on_204(settings):
+    respx.post(f"{settings.base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"token": "tok"})
+    )
+    respx.get(f"{settings.base_url}/notification/system").mock(return_value=httpx.Response(204))
+    with AQMeshClient(settings) as client:
+        assert client.get_system_notifications() == []
+
+
+@respx.mock
+def test_get_failed_sensors(settings, failed_sensor_payload):
+    respx.post(f"{settings.base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"token": "tok"})
+    )
+    respx.get(f"{settings.base_url}/Pods/SensorFail").mock(
+        return_value=httpx.Response(200, json=failed_sensor_payload)
+    )
+    with AQMeshClient(settings) as client:
+        failed = client.get_failed_sensors()
+
+    assert len(failed) == 1
+    assert failed[0].sensor_type == "SO2"
+    assert failed[0].pod_serial_number == 704150
+
+
+@respx.mock
+def test_get_failed_sensors_empty_on_204(settings):
+    respx.post(f"{settings.base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"token": "tok"})
+    )
+    respx.get(f"{settings.base_url}/Pods/SensorFail").mock(return_value=httpx.Response(204))
+    with AQMeshClient(settings) as client:
+        assert client.get_failed_sensors() == []
+
+
+@respx.mock
+def test_get_sensor_details_default_all(settings, sensor_detail_payload):
+    respx.post(f"{settings.base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"token": "tok"})
+    )
+    route = respx.get(url__regex=rf"{settings.base_url}/sensor/SensorDetail.*").mock(
+        return_value=httpx.Response(200, json=sensor_detail_payload)
+    )
+    with AQMeshClient(settings) as client:
+        details = client.get_sensor_details()
+
+    assert [d.sensor_type_name for d in details] == ["NO2", "O3"]
+    assert details[1].replacement_needed  # O3 is flagged
+    # Default (all pods) ends in the literal double-slash + 0 from the manual.
+    assert route.calls.last.request.url.path.endswith("/sensor/SensorDetail//0")
+
+
+@respx.mock
+def test_get_sensor_details_active_flag(settings, sensor_detail_payload):
+    respx.post(f"{settings.base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"token": "tok"})
+    )
+    route = respx.get(url__regex=rf"{settings.base_url}/sensor/SensorDetail.*").mock(
+        return_value=httpx.Response(200, json=sensor_detail_payload)
+    )
+    with AQMeshClient(settings) as client:
+        client.get_sensor_details(active=True)
+
+    assert route.calls.last.request.url.path.endswith("/sensor/SensorDetail//1")
+
+
+@respx.mock
+def test_get_sensor_details_empty_on_204(settings):
+    respx.post(f"{settings.base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"token": "tok"})
+    )
+    respx.get(url__regex=rf"{settings.base_url}/sensor/SensorDetail.*").mock(
+        return_value=httpx.Response(204)
+    )
+    with AQMeshClient(settings) as client:
+        assert client.get_sensor_details() == []

@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.2.0](https://github.com/rcgsheffield/aqmesh/compare/v0.1.4...v0.2.0) (2026-06-26)
+
+
+### Features
+
+* add aqmesh repeat command ([#68](https://github.com/rcgsheffield/aqmesh/issues/68)) ([#74](https://github.com/rcgsheffield/aqmesh/issues/74)) ([50449b5](https://github.com/rcgsheffield/aqmesh/commit/50449b53e919b245f93c35a80ced807040eb40fb))
+* **cli:** add read-only API context commands and API reference docs ([#84](https://github.com/rcgsheffield/aqmesh/issues/84)) ([b609b0a](https://github.com/rcgsheffield/aqmesh/commit/b609b0acdcd0236889f7c1a2540ce9b75fa6e326))
+* **schema:** add JSON schemas and Frictionless Data descriptor for raw data ([#76](https://github.com/rcgsheffield/aqmesh/issues/76)) ([ecb1fa3](https://github.com/rcgsheffield/aqmesh/commit/ecb1fa3568f6e78e708ee536d111a561f2413a11))
+
+
+### Bug Fixes
+
+* **deploy:** change default data volume mount point to /mnt/aqmesh ([#80](https://github.com/rcgsheffield/aqmesh/issues/80)) ([69ec51a](https://github.com/rcgsheffield/aqmesh/commit/69ec51a08ef20476a00e429abb0e37cedd3c5fff))
+* **flows:** diagnostic logging for zero-CSV-output (issue [#55](https://github.com/rcgsheffield/aqmesh/issues/55)) ([#61](https://github.com/rcgsheffield/aqmesh/issues/61)) ([3c1e2cc](https://github.com/rcgsheffield/aqmesh/commit/3c1e2ccdb99400ddd8cd0bbdf51835873479b10a))
+
+
+### Documentation
+
+* add CLAUDE.md for Claude Code ([#77](https://github.com/rcgsheffield/aqmesh/issues/77)) ([73bc390](https://github.com/rcgsheffield/aqmesh/commit/73bc3903b0523e9bb3bc63cce7128ae077e31c79))
+* add missing docstrings to transform and client modules ([#62](https://github.com/rcgsheffield/aqmesh/issues/62)) ([25c55f8](https://github.com/rcgsheffield/aqmesh/commit/25c55f8417c88c07f43b2d0f6454835d19e209ef))
+* add pipeline scheduling, state, and backfill explainer ([#71](https://github.com/rcgsheffield/aqmesh/issues/71)) ([5a9180d](https://github.com/rcgsheffield/aqmesh/commit/5a9180d6f0a1c661ce418696c015d085cd676c1a))
+* warn against using production credentials in local development ([#72](https://github.com/rcgsheffield/aqmesh/issues/72)) ([ef076e8](https://github.com/rcgsheffield/aqmesh/commit/ef076e8ea4eabc5f5059056f1a3be04df7d27e5c))
+
+
+### Continuous Integration
+
+* add lychee link check for Markdown docs ([#78](https://github.com/rcgsheffield/aqmesh/issues/78)) ([0ed3e0f](https://github.com/rcgsheffield/aqmesh/commit/0ed3e0fafc23a7e010b8860f7bfa6fc5bdbb5bc5))
+* add workflow_dispatch to release-to-orda for manual backfill ([#59](https://github.com/rcgsheffield/aqmesh/issues/59)) ([7941f09](https://github.com/rcgsheffield/aqmesh/commit/7941f09933eb5d08cefc5df5bf377e241d4ab3b1))
+* lint GitHub Actions workflows with actionlint ([#79](https://github.com/rcgsheffield/aqmesh/issues/79)) ([5d0398e](https://github.com/rcgsheffield/aqmesh/commit/5d0398e5b73540a66fbf666aafab315a3f0ae008))
+
+
+### Miscellaneous
+
+* **deps:** bump pydantic-settings in the uv group across 1 directory ([#87](https://github.com/rcgsheffield/aqmesh/issues/87)) ([506cb98](https://github.com/rcgsheffield/aqmesh/commit/506cb98d7e63e6790d679f996890b5e7cd867305))
+
 ## [0.1.4](https://github.com/rcgsheffield/aqmesh/compare/v0.1.3...v0.1.4) (2026-06-19)
 
 

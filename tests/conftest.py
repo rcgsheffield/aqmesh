@@ -53,6 +53,70 @@ def assets_payload() -> list[dict]:
 
 
 @pytest.fixture
+def serverping_payload() -> dict:
+    """Server health snapshot modelled on manual 4.16."""
+    return {
+        "server_time": "2026-06-19T09:02:42.417",
+        "last_sequence_number": 106649,
+        "most_recent_reading": "2026-06-19T08:57:00",
+        "last_communication": "2026-06-19T09:00:47.193",
+        "most_recent_processed": "2026-06-19T09:01:23.746",
+        "version": "Vn 0.9",
+    }
+
+
+@pytest.fixture
+def notifications_payload() -> list[dict]:
+    """System notifications modelled on manual 4.17 (one empty entry to be filtered)."""
+    return [
+        {"system_information": "Planned downtime 2026-06-20 02:00-03:00 UTC"},
+        {"system_information": ""},
+    ]
+
+
+@pytest.fixture
+def sensor_detail_payload() -> list[dict]:
+    """Two sensors modelled on manual 4.20: one healthy, one due for replacement."""
+    return [
+        {
+            "serial_number": 2410103,
+            "sensor_serial_number": "202641142",
+            "sensor_type_name": "NO2",
+            "sensor_status_name": "Reading",
+            "pod_status_name": "Active",
+            "age_in_months": 8,
+            "expiry_date": "2027-01-16T00:00:00",
+            "replacement_needed": None,
+        },
+        {
+            "serial_number": 2410103,
+            "sensor_serial_number": "204641031",
+            "sensor_type_name": "O3",
+            "sensor_status_name": "Reading",
+            "pod_status_name": "Active",
+            "age_in_months": 26,
+            "expiry_date": "2020-03-04T00:00:00",
+            "replacement_needed": "Replacement of the O3 electro-chemical sensor is recommended.",
+        },
+    ]
+
+
+@pytest.fixture
+def failed_sensor_payload() -> list[dict]:
+    """A failed sensor modelled on manual 4.8."""
+    return [
+        {
+            "sensor_serial_number": 11,
+            "pod_serial_number": 704150,
+            "sensor_type": "SO2",
+            "fail_type": "Fail criteria exceeded",
+            "fail_date": "2026-02-26T09:00:00",
+            "status": "Sensor Allocated",
+        }
+    ]
+
+
+@pytest.fixture
 def gas_batch() -> list[dict]:
     """Two gas readings: a normal one, a 'not fitted' sensor, and a sentinel."""
     base = {

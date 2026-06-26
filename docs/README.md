@@ -6,6 +6,7 @@ pipeline does and how to run it locally, start with the [project README](../READ
 | Document | Covers |
 | --- | --- |
 | [`architecture.md`](architecture.md) | System internals — source modules, infrastructure components, data layout, and design decisions. |
+| [`api-reference/`](api-reference/README.md) | Curated reference for the AQMesh REST API — endpoint paths, parameters, and response shapes, distilled from the vendor manual PDF and cross-linked to the client code. |
 | [`deployment.md`](deployment.md) | Installing the pipeline on an Ubuntu 24.04 VM with `deploy/bootstrap.sh`, setting credentials, verifying the deployment, and **rolling out updates / upgrading Prefect**. |
 | [`system-requirements.md`](system-requirements.md) | VM sizing — CPU, RAM, root disk, and the separately mounted data volume — and how the append-only data store grows. |
 | [`service-management.md`](service-management.md) | Day-to-day service control — `systemctl` and `journalctl` commands, health checks, Prefect web UI access, schedule management, credential rotation, and common failure scenarios. |

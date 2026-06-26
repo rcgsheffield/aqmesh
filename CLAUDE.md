@@ -16,7 +16,9 @@ uv run pytest -k test_ingest   # single test by name
 uv run aqmesh pipeline         # ingest + clean
 uv run aqmesh ingest           # download raw data only
 uv run aqmesh clean            # rebuild CSVs from raw store
-uv run aqmesh check            # health check
+uv run aqmesh check            # health check: auth, pods, server freshness + notices
+uv run aqmesh ping             # server health/freshness probe (no credentials needed)
+uv run aqmesh sensors          # fleet sensor age/expiry/failures (read-only)
 ```
 
 Environment is configured via `.env` (copy from `.env.example`). Set `AQMESH_ENVIRONMENT=prod` to target the production API; default is `test` (`apitest.aqmeshdata.net`).
@@ -32,7 +34,7 @@ Non-obvious invariants:
 - The **AQMesh server-side cursor** is the primary state — the `/LocationData/Next` endpoint advances a per-(location, param) pointer on the server. `data/state/pointers.json` is a local audit trail only, not used to filter requests.
 - Interrupted runs are safe: the server cursor only advances on a successful API call, so the next run retries failed pairs automatically.
 
-Module map, data layout, and infrastructure detail: **docs/architecture.md**. Scheduling, state, and backfill: **docs/pipeline.md**.
+Module map, data layout, and infrastructure detail: **docs/architecture.md**. Scheduling, state, and backfill: **docs/pipeline.md**. AQMesh REST API endpoints (paths, params, response shapes, distilled from the vendor PDF): **docs/api-reference/**.
 
 ## Testing notes
 
