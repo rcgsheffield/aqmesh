@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 
+import pytest
 import yaml
 
 from aqmesh_pipeline.models import Param
 from aqmesh_pipeline.storage import (
+    CorruptRawFileError,
     load_pointers,
+    raw_param_dir,
     raw_store_descriptor_path,
     read_raw_readings,
     save_pointers,
@@ -96,3 +100,47 @@ def test_write_raw_store_descriptor_atomic(settings):
     loaded = yaml.safe_load(path.read_text())
     assert loaded["name"] == "aqmesh-raw"
     assert loaded["resources"] == []
+
+
+def test_interrupted_write_leaves_no_corrupt_file(settings, gas_batch):
+    """A stale .tmp file (simulating a killed-mid-write process) must not
+    be visible to the reader as a corrupt JSON file."""
+    out_dir = raw_param_dir(settings, 510, Param.GAS)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    write_raw_batch(settings, 510, Param.GAS, gas_batch, pulled_at="20260101T000000Z", seq=0)
+    # Simulate crash after tmp write but before rename (seq=1).
+    stale_tmp = out_dir / "20260101T010000Z_0001.json.tmp"
+    stale_tmp.write_text(json.dumps(gas_batch), encoding="utf-8")
+
+    # Reader's *.json glob must not match the .tmp file.
+    df = read_raw_readings(settings, 510, Param.GAS)
+    assert len(df) == 2  # only the first batch
+
+
+def test_corrupt_raw_file_raises_clearly(settings):
+    """A pre-existing corrupt raw file must raise CorruptRawFileError, not
+    silently return an empty DataFrame."""
+    out_dir = raw_param_dir(settings, 510, Param.GAS)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "20260101T000000Z_0000.json").write_text("{truncated", encoding="utf-8")
+
+    with pytest.raises(CorruptRawFileError):
+        read_raw_readings(settings, 510, Param.GAS)
+
+
+def test_sha256_sidecar_written_with_batch(settings, gas_batch):
+    """write_raw_batch must write a .sha256 sidecar alongside the JSON."""
+    path = write_raw_batch(settings, 510, Param.GAS, gas_batch, pulled_at="20260101T000000Z", seq=0)
+    sha_path = path.with_name(path.name + ".sha256")
+    assert sha_path.exists()
+    expected = hashlib.sha256(json.dumps(gas_batch).encode()).hexdigest()
+    assert sha_path.read_text().strip() == expected
+
+
+def test_checksum_mismatch_raises(settings, gas_batch):
+    """A tampered raw file (checksum mismatch) must raise CorruptRawFileError."""
+    path = write_raw_batch(settings, 510, Param.GAS, gas_batch, pulled_at="20260101T000000Z", seq=0)
+    path.with_name(path.name + ".sha256").write_text("deadbeef" * 8, encoding="utf-8")
+
+    with pytest.raises(CorruptRawFileError):
+        read_raw_readings(settings, 510, Param.GAS)

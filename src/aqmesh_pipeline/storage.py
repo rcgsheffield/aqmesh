@@ -2,11 +2,12 @@
 
 Layout under ``AQMESH_DATA_ROOT``::
 
-    raw/   location=<n>/param=<gas|particle>/<pulled_at>_<seq>.json   # append-only payload
-    clean/ location=<n>/aqmesh_<n>_<param>.csv                        # scaled, sentinels blanked
-           location=<n>/aqmesh_<n>_<param>.metadata.json             # sidecar data dictionary
-    state/ pointers.json                                             # progress per location/param
-           assets.json                                              # asset snapshot for clean
+    raw/   location=<n>/param=<gas|particle>/<pulled_at>_<seq>.json     # append-only payload
+                                              <pulled_at>_<seq>.json.sha256  # integrity sidecar
+    clean/ location=<n>/aqmesh_<n>_<param>.csv                          # scaled, sentinels blanked
+           location=<n>/aqmesh_<n>_<param>.metadata.json                # sidecar data dictionary
+    state/ pointers.json                                               # per-location/param progress
+           assets.json                                                 # asset snapshot for clean
 
 Raw files are append-only: every pull writes new files and nothing is ever
 mutated. Cleaning reads *all* raw files for a location, ordered by pull time, and
@@ -16,6 +17,7 @@ dedupes by the reading number keeping the last occurrence -- so rebased values
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from pathlib import Path
@@ -27,6 +29,11 @@ from .config import Settings
 from .models import Asset, Param
 
 logger = logging.getLogger(__name__)
+
+
+class CorruptRawFileError(RuntimeError):
+    """Raised when a raw data file fails an integrity or parse check."""
+
 
 POINTERS_FILENAME = "pointers.json"
 ASSETS_FILENAME = "assets.json"
@@ -109,7 +116,17 @@ def write_raw_batch(
     out_dir = raw_param_dir(settings, location_number, param)
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / f"{pulled_at}_{seq:04d}.json"
-    path.write_text(json.dumps(batch), encoding="utf-8")
+    encoded = json.dumps(batch).encode("utf-8")
+
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_bytes(encoded)
+    tmp.replace(path)
+
+    sha_path = path.with_name(path.name + ".sha256")
+    sha_tmp = sha_path.with_name(sha_path.name + ".tmp")
+    sha_tmp.write_text(hashlib.sha256(encoded).hexdigest(), encoding="utf-8")
+    sha_tmp.replace(sha_path)
+
     return path
 
 
@@ -127,7 +144,17 @@ def read_raw_readings(settings: Settings, location_number: int, param: Param) ->
 
     records: list[dict] = []
     for f in files:
-        records.extend(json.loads(f.read_text(encoding="utf-8")))
+        content = f.read_text(encoding="utf-8")
+        sha_path = f.with_name(f.name + ".sha256")
+        if sha_path.exists():
+            expected = sha_path.read_text(encoding="utf-8").strip()
+            if hashlib.sha256(content.encode("utf-8")).hexdigest() != expected:
+                raise CorruptRawFileError(f"Checksum mismatch for raw file: {f}")
+        try:
+            records.extend(json.loads(content))
+        except json.JSONDecodeError as exc:
+            logger.error("Corrupt raw file (JSON parse error): %s", f)
+            raise CorruptRawFileError(f"Corrupt raw file: {f}") from exc
     if not records:
         return pd.DataFrame()
 
