@@ -139,6 +139,13 @@ def read_raw_readings(settings: Settings, location_number: int, param: Param) ->
 
 
 # -- clean store ---------------------------------------------------------
+def _write_json_atomic(data: dict, path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    tmp.replace(path)
+
+
 def write_clean_csv(df: pd.DataFrame, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".csv.tmp")
@@ -148,17 +155,12 @@ def write_clean_csv(df: pd.DataFrame, path: Path) -> None:
 
 def write_clean_metadata(metadata: dict, path: Path) -> None:
     """Write the sidecar data dictionary for a clean CSV (issue #58)."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".metadata.json.tmp")
-    tmp.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
-    tmp.replace(path)
+    _write_json_atomic(metadata, path)
 
 
 def write_clean_csvw(csvw: dict, path: Path) -> None:
     """Write the CSVW Table descriptor for a clean CSV (issue #92)."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text(json.dumps(csvw, indent=2, ensure_ascii=False), encoding="utf-8")
+    _write_json_atomic(csvw, path)
 
 
 def write_raw_store_descriptor(descriptor: dict, path: Path) -> None:

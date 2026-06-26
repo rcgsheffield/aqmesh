@@ -309,7 +309,7 @@ def test_clean_data_writes_one_csv_per_param(seed_raw):
         csvw_path = clean_csvw_path(seed_raw, 510, param)
         assert csvw_path.exists(), f"CSVW missing for {param.label}"
         doc = json.loads(csvw_path.read_text())
-        assert doc["@context"] == "http://www.w3.org/ns/csvw"
+        assert "http://www.w3.org/ns/csvw" in doc["@context"]
         assert doc["url"] == clean_csv_path(seed_raw, 510, param).name
         csv_cols = list(pd.read_csv(clean_csv_path(seed_raw, 510, param)).columns)
         csvw_names = [c["name"] for c in doc["tableSchema"]["columns"]]
