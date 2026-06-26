@@ -8,7 +8,7 @@ Two cleaning steps are applied (manual sections 4.12-4.15):
    measurement via ``value = prescaled * slope + offset``.
 
 The output is one tidy row per ``reading_datestamp`` with one column per pollutant.
-:func:`resample_5min` optionally aggregates this onto a regular 5-minute grid.
+:func:`resample_daily` optionally aggregates this onto a regular daily grid.
 """
 
 from __future__ import annotations
@@ -153,8 +153,8 @@ def _join_distinct(values: pd.Series) -> object:
     return ";".join(sorted(str(v) for v in distinct))
 
 
-def resample_5min(df: pd.DataFrame, freq: str = "5min") -> pd.DataFrame:
-    """Resample a cleaned location/param frame onto a regular time grid.
+def resample_daily(df: pd.DataFrame, freq: str = "1D") -> pd.DataFrame:
+    """Resample a cleaned location/param frame onto a regular daily grid.
 
     Expects the output of :func:`clean_readings` for a single pod: a frame with a
     ``reading_datestamp`` column and one column per pollutant. Every column is
@@ -164,7 +164,7 @@ def resample_5min(df: pd.DataFrame, freq: str = "5min") -> pd.DataFrame:
     values) and non-numeric columns (e.g. ``reading_status``) are aggregated to the
     ``;``-joined distinct values seen in the bucket. Buckets that contain no
     readings become ``NaN`` -- there is no forward-fill. Buckets are aligned to
-    wall-clock marks (00:00, 00:05, ... for the default 5-minute grid).
+    UTC midnight (00:00) for the default daily grid.
 
     ``location_number`` and ``pod_serial_number`` are constant within the frame and
     are preserved as leading columns (keeping their original dtype rather than being
@@ -173,7 +173,7 @@ def resample_5min(df: pd.DataFrame, freq: str = "5min") -> pd.DataFrame:
     Args:
         df: Cleaned readings for one location/param, as returned by
             :func:`clean_readings`.
-        freq: A pandas offset alias for the bucket width (default ``"5min"``).
+        freq: A pandas offset alias for the bucket width (default ``"1D"``).
 
     Returns:
         A frame with one row per ``freq`` bucket from the first to the last

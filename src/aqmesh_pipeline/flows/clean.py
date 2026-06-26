@@ -2,7 +2,7 @@
 
 Reads all raw readings for each location (deduping rebased values), applies
 sentinel handling + calibration via :mod:`aqmesh_pipeline.transform`, and writes
-one CSV per location/param under ``clean/``. By default it also writes a 5-minute
+one CSV per location/param under ``clean/``. By default it also writes a daily
 resampled CSV per location/param under ``resampled/``.
 """
 
@@ -18,7 +18,7 @@ from ..storage import (
     resampled_csv_path,
     write_clean_csv,
 )
-from ..transform import clean_readings, resample_5min
+from ..transform import clean_readings, resample_daily
 
 
 @task(retries=2, retry_delay_seconds=10)
@@ -27,7 +27,7 @@ def clean_location_param(
 ) -> dict:
     """Clean one location/param and write its CSV. No-op if there is no raw data.
 
-    When ``resample`` is true, also writes a 5-minute resampled CSV under the
+    When ``resample`` is true, also writes a daily resampled CSV under the
     separate ``resampled/`` tree.
     """
     raw = read_raw_readings(settings, location_number, param)
@@ -46,7 +46,7 @@ def clean_location_param(
     resampled_path = None
     if resample:
         resampled_path = resampled_csv_path(settings, location_number, param)
-        write_clean_csv(resample_5min(cleaned), resampled_path)
+        write_clean_csv(resample_daily(cleaned), resampled_path)
 
     return {
         "location_number": location_number,
@@ -61,7 +61,7 @@ def clean_location_param(
 def clean_data(settings: Settings | None = None, resample: bool = True) -> list[dict]:
     """Clean every location present in the raw store.
 
-    When ``resample`` is true (the default), a 5-minute resampled CSV is also
+    When ``resample`` is true (the default), a daily resampled CSV is also
     written under ``resampled/`` for each location/param.
     """
     settings = settings or get_settings()

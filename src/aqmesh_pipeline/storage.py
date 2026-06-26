@@ -45,7 +45,7 @@ def resampled_csv_path(settings: Settings, location_number: int, param: Param) -
     return (
         settings.resampled_dir
         / f"location={location_number}"
-        / f"aqmesh_{location_number}_{param.label}_5min.csv"
+        / f"aqmesh_{location_number}_{param.label}_daily.csv"
     )
 
 

@@ -59,8 +59,8 @@ clean/
 
 resampled/
   location=<n>/
-    aqmesh_<n>_gas_5min.csv         # clean readings averaged onto a 5-min grid
-    aqmesh_<n>_particle_5min.csv
+    aqmesh_<n>_gas_daily.csv         # clean readings averaged onto a daily grid
+    aqmesh_<n>_particle_daily.csv
 
 state/
   pointers.json                     # cursor per location/param pair — safe to restart mid-run
@@ -76,14 +76,14 @@ Raw files are never modified or deleted — the clean step always rebuilds from 
   `state/pointers.json` exactly where it left off.
 - **Single idempotent deploy script** — `deploy/bootstrap.sh` is the update path as well as the
   install path, so there is no separate upgrade procedure.
-- **5-minute resampling** — `transform.resample_5min` averages the cleaned per-reading data onto a
-  regular 5-minute grid, written to the separate `resampled/` tree. Bins are aligned to wall-clock
-  marks (00:00, 00:05, …); each bin value is the **mean** of the readings it contains (NaN within a
-  bin is skipped, so sentinel-blanked values do not poison the average); bins containing no readings
-  are left **NaN** with no forward-fill. Every column is carried through — nothing is filtered out, so
-  researchers can decide what to use: numeric columns (pollutants and environmental/housekeeping
-  readings alike) are averaged, while non-numeric columns (e.g. `reading_status`) are aggregated to
-  the `;`-joined distinct values in each bin. `location_number` and `pod_serial_number` are kept as
-  leading identity columns. The per-reading `clean/` CSVs are always produced as well, so raw cadence
-  stays accessible. Resampling runs by default; `aqmesh clean --no-resample` (and
+- **Daily resampling** — `transform.resample_daily` averages the cleaned per-reading data onto a
+  regular daily grid, written to the separate `resampled/` tree. Bins are aligned to UTC midnight;
+  each bin value is the **mean** of the readings it contains (NaN within a bin is skipped, so
+  sentinel-blanked values do not poison the average); bins containing no readings are left **NaN**
+  with no forward-fill. Every column is carried through — nothing is filtered out, so researchers
+  can decide what to use: numeric columns (pollutants and environmental/housekeeping readings alike)
+  are averaged, while non-numeric columns (e.g. `reading_status`) are aggregated to the `;`-joined
+  distinct values in each bin. `location_number` and `pod_serial_number` are kept as leading identity
+  columns. The per-reading `clean/` CSVs are always produced as well, so raw cadence stays
+  accessible. Resampling runs by default; `aqmesh clean --no-resample` (and
   `aqmesh pipeline --no-resample`) skips the `resampled/` output.

@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 
 from aqmesh_pipeline.models import Param
-from aqmesh_pipeline.transform import clean_readings, resample_5min
+from aqmesh_pipeline.transform import clean_readings, resample_daily
 
 
 def test_clean_gas_applies_slope_and_offset(gas_batch):
@@ -54,7 +54,7 @@ def _cleaned_frame(rows: list[dict]) -> pd.DataFrame:
     return df
 
 
-def test_resample_5min_averages_within_bin():
+def test_resample_daily_averages_within_bin():
     df = _cleaned_frame(
         [
             {
@@ -68,18 +68,18 @@ def test_resample_5min_averages_within_bin():
                 "location_number": 510,
                 "pod_serial_number": 2410149,
                 "reading_number": 2,
-                "reading_datestamp": "2026-01-01T09:03:00",
+                "reading_datestamp": "2026-01-01T14:30:00",
                 "co": 20.0,
             },
         ]
     )
-    out = resample_5min(df)
+    out = resample_daily(df)
     assert len(out) == 1
-    assert out.loc[0, "reading_datestamp"] == pd.Timestamp("2026-01-01 09:00:00")
+    assert out.loc[0, "reading_datestamp"] == pd.Timestamp("2026-01-01")
     assert out.loc[0, "co"] == pytest.approx(15.0)
 
 
-def test_resample_5min_empty_bins_are_nan_and_wallclock_aligned():
+def test_resample_daily_empty_bins_are_nan_and_midnight_aligned():
     df = _cleaned_frame(
         [
             {
@@ -93,27 +93,25 @@ def test_resample_5min_empty_bins_are_nan_and_wallclock_aligned():
                 "location_number": 510,
                 "pod_serial_number": 2410149,
                 "reading_number": 2,
-                "reading_datestamp": "2026-01-01T09:17:00",
+                "reading_datestamp": "2026-01-03T14:00:00",
                 "co": 40.0,
             },
         ]
     )
-    out = resample_5min(df).set_index("reading_datestamp")
-    # Bins aligned to wall-clock 5-min marks, spanning first to last reading.
+    out = resample_daily(df).set_index("reading_datestamp")
+    # Bins aligned to UTC midnight, spanning first to last reading.
     assert list(out.index) == [
-        pd.Timestamp("2026-01-01 09:00:00"),
-        pd.Timestamp("2026-01-01 09:05:00"),
-        pd.Timestamp("2026-01-01 09:10:00"),
-        pd.Timestamp("2026-01-01 09:15:00"),
+        pd.Timestamp("2026-01-01"),
+        pd.Timestamp("2026-01-02"),
+        pd.Timestamp("2026-01-03"),
     ]
-    assert out.loc["2026-01-01 09:00:00", "co"] == pytest.approx(10.0)
-    # Bins with no readings are NaN (no forward-fill).
-    assert math.isnan(out.loc["2026-01-01 09:05:00", "co"])
-    assert math.isnan(out.loc["2026-01-01 09:10:00", "co"])
-    assert out.loc["2026-01-01 09:15:00", "co"] == pytest.approx(40.0)
+    assert out.loc["2026-01-01", "co"] == pytest.approx(10.0)
+    # Day with no readings is NaN (no forward-fill).
+    assert math.isnan(out.loc["2026-01-02", "co"])
+    assert out.loc["2026-01-03", "co"] == pytest.approx(40.0)
 
 
-def test_resample_5min_preserves_identity_keeps_all_columns():
+def test_resample_daily_preserves_identity_keeps_all_columns():
     df = _cleaned_frame(
         [
             {
@@ -126,7 +124,7 @@ def test_resample_5min_preserves_identity_keeps_all_columns():
             },
         ]
     )
-    out = resample_5min(df)
+    out = resample_daily(df)
     # Identity columns kept as their original value (not coerced to a float average).
     assert out.loc[0, "location_number"] == 510
     assert out.loc[0, "pod_serial_number"] == 2410149
@@ -137,7 +135,7 @@ def test_resample_5min_preserves_identity_keeps_all_columns():
     assert "reading_status" in out.columns  # non-numeric -> joined distinct
 
 
-def test_resample_5min_joins_distinct_status_within_bin():
+def test_resample_daily_joins_distinct_status_within_bin():
     df = _cleaned_frame(
         [
             {
@@ -152,7 +150,7 @@ def test_resample_5min_joins_distinct_status_within_bin():
                 "location_number": 510,
                 "pod_serial_number": 2410149,
                 "reading_number": 2,
-                "reading_datestamp": "2026-01-01T09:03:00",
+                "reading_datestamp": "2026-01-01T14:30:00",
                 "co": 20.0,
                 "reading_status": "FAULT",
             },
@@ -160,20 +158,20 @@ def test_resample_5min_joins_distinct_status_within_bin():
                 "location_number": 510,
                 "pod_serial_number": 2410149,
                 "reading_number": 3,
-                "reading_datestamp": "2026-01-01T09:12:00",
+                "reading_datestamp": "2026-01-03T09:00:00",
                 "co": 30.0,
                 "reading_status": "OK",
             },
         ]
     )
-    out = resample_5min(df).set_index("reading_datestamp")
+    out = resample_daily(df).set_index("reading_datestamp")
     # Non-numeric status is not averaged; distinct values in the bin are joined.
-    assert out.loc["2026-01-01 09:00:00", "reading_status"] == "FAULT;OK"
-    # An empty bin reads as NaN for the status column too (no forward-fill).
-    assert pd.isna(out.loc["2026-01-01 09:05:00", "reading_status"])
+    assert out.loc["2026-01-01", "reading_status"] == "FAULT;OK"
+    # An empty day reads as NaN for the status column too (no forward-fill).
+    assert pd.isna(out.loc["2026-01-02", "reading_status"])
 
 
-def test_resample_5min_skips_nan_within_bin():
+def test_resample_daily_skips_nan_within_bin():
     df = _cleaned_frame(
         [
             {
@@ -187,15 +185,15 @@ def test_resample_5min_skips_nan_within_bin():
                 "location_number": 510,
                 "pod_serial_number": 2410149,
                 "reading_number": 2,
-                "reading_datestamp": "2026-01-01T09:03:00",
+                "reading_datestamp": "2026-01-01T14:30:00",
                 "co": 20.0,
             },
         ]
     )
-    out = resample_5min(df)
+    out = resample_daily(df)
     # A sentinel-blanked reading does not poison the bucket mean.
     assert out.loc[0, "co"] == pytest.approx(20.0)
 
 
-def test_resample_5min_empty_returns_empty():
-    assert resample_5min(pd.DataFrame()).empty
+def test_resample_daily_empty_returns_empty():
+    assert resample_daily(pd.DataFrame()).empty
