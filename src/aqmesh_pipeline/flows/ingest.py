@@ -141,14 +141,17 @@ def ingest_raw(settings: Settings | None = None) -> dict:
 
     save_pointers(settings, pointers)
 
-    descriptor = build_raw_store_descriptor(
-        assets=load_assets(settings),
-        pointers=pointers,
-        summaries=summaries,
-        settings=settings,
-        generated_at=datetime.now(UTC),
-    )
-    write_raw_store_descriptor(descriptor, raw_store_descriptor_path(settings))
+    try:
+        descriptor = build_raw_store_descriptor(
+            assets=load_assets(settings),
+            pointers=pointers,
+            summaries=summaries,
+            settings=settings,
+            generated_at=datetime.now(UTC),
+        )
+        write_raw_store_descriptor(descriptor, raw_store_descriptor_path(settings))
+    except Exception:
+        logger.warning("Failed to write raw store descriptor; skipping.", exc_info=True)
 
     total_new = sum(s["new_readings"] for s in summaries)
     failed = [s for s in summaries if s["status"] == "failed"]

@@ -180,6 +180,28 @@ def test_ingest_raw_skips_404_locations(
 
 
 @respx.mock
+def test_ingest_raw_continues_when_descriptor_write_fails(
+    settings, assets_payload, gas_batch, particle_batch, monkeypatch
+):
+    """A descriptor write failure must not prevent ingest from returning normally."""
+    _mock_api(settings.base_url, assets_payload, gas_batch, particle_batch)
+    monkeypatch.setattr(
+        "aqmesh_pipeline.flows.ingest.write_raw_store_descriptor",
+        Mock(side_effect=OSError("disk full")),
+    )
+
+    summary = ingest_raw(settings)
+
+    # Raw data and pointers are still written.
+    assert list(raw_param_dir(settings, 510, Param.GAS).glob("*.json"))
+    pointers = load_pointers(settings)
+    assert pointers["510"]["gas"]["new_readings"] == len(gas_batch)
+    # Descriptor was not written, but the flow still returned successfully.
+    assert not raw_store_descriptor_path(settings).exists()
+    assert summary["locations"] == 2
+
+
+@respx.mock
 def test_clean_data_writes_one_csv_per_param(seed_raw):
     _allow_prefect()
     results = clean_data(seed_raw)
