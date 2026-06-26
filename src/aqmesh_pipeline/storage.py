@@ -39,7 +39,7 @@ def write_data_docs(settings: Settings) -> list[Path]:
     resources = files("aqmesh_pipeline.resources")
     written = []
     for item in resources.iterdir():
-        if item.is_file():
+        if item.is_file() and not item.name.startswith("_"):
             dest = settings.data_root / item.name
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_text(item.read_text(encoding="utf-8"), encoding="utf-8")

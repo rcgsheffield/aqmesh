@@ -19,7 +19,10 @@ def pipeline(resample: bool = True) -> dict:
     CSVs under ``resampled/``.
     """
     logger = get_run_logger()
-    write_data_docs(get_settings())
+    try:
+        write_data_docs(get_settings())
+    except Exception:
+        logger.warning("Failed to write data docs — continuing.")
     try:
         sync_location_metadata()
     except Exception:
