@@ -8,14 +8,20 @@ Outdoor air quality sensors data pipeline for the [AQMesh](https://www.aqmesh.co
 It downloads all raw readings from the AQMesh API to a shared storage volume and cleans them into
 research-ready CSV. Orchestrated with [Prefect 3](https://docs.prefect.io/v3/get-started).
 
-```
-AQMesh API ──► client.py ──► flows/ingest.py ──► raw/   (append-only JSON)
-                                                      │
-                                                      ▼
-                                         flows/clean.py ──► clean/ (calibrated CSVs)
+```mermaid
+graph LR
+    %% Nodes & Data Flow
+    API["AQMesh API"] -->|Fetch| PY1["client.py"]
+    PY1 -->|Pass data| PY2["flows/ingest.py"]
+    PY2 -->|Append-only JSON| RAW[("raw/")]
+    
+    RAW -->|Read| PY3["flows/clean.py"]
+    PY3 -->|Calibrated CSVs| CLEAN[("clean/")]
 
-Scheduled hourly at :06 (Europe/London) by Prefect 3
-CLI: aqmesh pipeline | ingest | clean | check
+    %% Styling & Formatting
+    style API fill:#f9f,stroke:#333,stroke-width:2px
+    style RAW fill:#f96,stroke:#333,stroke-width:2px
+    style CLEAN fill:#9f9,stroke:#333,stroke-width:2px
 ```
 
 ## Documentation
