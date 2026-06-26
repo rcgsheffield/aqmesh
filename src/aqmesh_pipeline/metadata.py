@@ -82,8 +82,7 @@ READING_STATUS_LEGEND: dict[str, str] = {
         "readings are available but should be treated as potentially unreliable"
     ),
     "Misread": (
-        "Particle or noise sensor unable to transfer valid data; "
-        "affected values are set to missing"
+        "Particle or noise sensor unable to transfer valid data; affected values are set to missing"
     ),
     "Other Fault Zero": (
         "Particle counter unable to provide a valid reading following a power-cycle "
