@@ -1,4 +1,4 @@
-"""Build a W3C CSVW Table descriptor from the sidecar metadata dict (issue #92).
+"""Build a W3C CSVW Table descriptor from the sidecar metadata dict.
 
 The CSVW standard (https://www.w3.org/TR/tabular-data-primer/) requires a
 ``<csv>-metadata.json`` descriptor alongside each CSV for machine-readable

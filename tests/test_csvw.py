@@ -1,4 +1,4 @@
-"""Tests for the W3C CSVW descriptor builder (issue #92)."""
+"""Tests for the W3C CSVW descriptor builder."""
 
 from __future__ import annotations
 

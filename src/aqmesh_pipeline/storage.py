@@ -75,7 +75,7 @@ def clean_metadata_path(settings: Settings, location_number: int, param: Param) 
 
 
 def clean_csvw_path(settings: Settings, location_number: int, param: Param) -> Path:
-    """CSVW per-file descriptor path next to the clean CSV (issue #92).
+    """CSVW per-file descriptor path next to the clean CSV.
 
     Follows the W3C CSVW naming convention: ``<csv-url>-metadata.json``.
     """
@@ -159,7 +159,7 @@ def write_clean_metadata(metadata: dict, path: Path) -> None:
 
 
 def write_clean_csvw(csvw: dict, path: Path) -> None:
-    """Write the CSVW Table descriptor for a clean CSV (issue #92)."""
+    """Write the CSVW Table descriptor for a clean CSV."""
     _write_json_atomic(csvw, path)
 
 
