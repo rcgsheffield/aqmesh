@@ -24,8 +24,9 @@ from .models import (
 )
 
 # Environmental / housekeeping columns passed through unchanged when present.
-_GAS_PASSTHROUGH = ("temperature_f", "pressure", "humidity", "battery_voltage")
+_GAS_PASSTHROUGH = ("temperature_c", "temperature_f", "pressure", "humidity", "battery_voltage")
 _PARTICLE_PASSTHROUGH = (
+    "temperature_c",
     "temperature_f",
     "pressure",
     "humidity",
@@ -33,6 +34,9 @@ _PARTICLE_PASSTHROUGH = (
     "super_cap_voltage",
     "reading_status",
 )
+# Temperature columns are always emitted so the output schema is consistent
+# across firmware variants.
+_TEMPERATURE_COLS: frozenset[str] = frozenset({"temperature_c", "temperature_f"})
 
 
 def _scale(
@@ -68,20 +72,29 @@ def _base_frame(df: pd.DataFrame, reading_number_field: str) -> pd.DataFrame:
     return out
 
 
-def _append_passthrough(out: pd.DataFrame, df: pd.DataFrame, cols: tuple[str, ...]) -> None:
+def _append_passthrough(
+    out: pd.DataFrame,
+    df: pd.DataFrame,
+    cols: tuple[str, ...],
+    always: frozenset[str] = frozenset(),
+) -> None:
     """Append environmental passthrough columns from the source frame.
 
-    Columns listed in ``cols`` are copied from ``df`` into ``out`` only
-    when they are present in the source frame.
+    Columns listed in ``cols`` are copied from ``df`` into ``out`` when present.
+    Columns also in ``always`` are emitted as ``pd.NA`` when absent, so the
+    output schema is consistent regardless of which fields the API returned.
 
     Args:
         out: Output DataFrame to mutate in place.
         df: Source DataFrame to copy columns from.
         cols: Names of columns to pass through unchanged.
+        always: Subset of ``cols`` that must always appear in ``out``.
     """
     for col in cols:
         if col in df.columns:
             out[col] = df[col]
+        elif col in always:
+            out[col] = pd.NA
 
 
 def clean_gas(df: pd.DataFrame) -> pd.DataFrame:
@@ -102,7 +115,7 @@ def clean_gas(df: pd.DataFrame) -> pd.DataFrame:
         out[sp] = _scale(
             df[prescaled], df.get(f"{sp}_slope"), df.get(f"{sp}_offset"), GAS_SENTINELS
         )
-    _append_passthrough(out, df, _GAS_PASSTHROUGH)
+    _append_passthrough(out, df, _GAS_PASSTHROUGH, always=_TEMPERATURE_COLS)
     return out.sort_values("reading_datestamp").reset_index(drop=True)
 
 
@@ -124,7 +137,7 @@ def clean_particle(df: pd.DataFrame) -> pd.DataFrame:
         out[ch] = _scale(
             df[prescale], df.get(f"{ch}_slope"), df.get(f"{ch}_offset"), PARTICLE_SENTINELS
         )
-    _append_passthrough(out, df, _PARTICLE_PASSTHROUGH)
+    _append_passthrough(out, df, _PARTICLE_PASSTHROUGH, always=_TEMPERATURE_COLS)
     return out.sort_values("reading_datestamp").reset_index(drop=True)
 
 
