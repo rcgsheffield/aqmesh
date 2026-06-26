@@ -195,6 +195,10 @@ def resample_daily(df: pd.DataFrame, freq: str = "1D") -> pd.DataFrame:
     if df.empty:
         return df
 
+    df = df.dropna(subset=["reading_datestamp"])
+    if df.empty:
+        return df
+
     identity = {col: df[col].iloc[0] for col in _IDENTITY_COLS if col in df.columns}
     indexed = df.set_index("reading_datestamp").sort_index()
 
