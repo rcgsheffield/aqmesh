@@ -212,7 +212,6 @@ def build_raw_store_descriptor(
                     f"{param.label.capitalize()}-parameter batch files for location {loc_num}. "
                     f"Path pattern: location={loc_num}/param={param.label}/<pulled_at>_<seq>.json"
                 ),
-                "path": f"location={loc_num}/param={param.label}/",
                 "mediatype": "application/json",
                 "schema": {"$ref": f"{_SCHEMA_BASE}/raw_{param.label}_reading.json"},
                 "location_number": loc_num,
