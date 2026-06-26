@@ -2,7 +2,8 @@
 
 Usage::
 
-    aqmesh pipeline      # ingest + clean (default)
+    aqmesh pipeline      # metadata + ingest + clean (default)
+    aqmesh metadata      # sync location/sensor metadata; write info.json per pod
     aqmesh ingest        # download raw data only
     aqmesh clean         # rebuild cleaned CSVs from the raw store
     aqmesh check         # smoke-test: authenticate, list pods, server health (no writes)
@@ -26,6 +27,7 @@ from .client import AQMeshAuthError, AQMeshClient
 from .config import Settings, get_settings
 from .flows.clean import clean_data
 from .flows.ingest import ingest_raw
+from .flows.metadata import sync_location_metadata
 from .flows.pipeline import pipeline
 from .models import Param
 from .storage import write_raw_batch
@@ -343,6 +345,7 @@ def _repeat_last_cmd(argv: Sequence[str], settings: Settings | None = None) -> N
 
 _COMMANDS = {
     "pipeline": pipeline,
+    "metadata": sync_location_metadata,
     "ingest": ingest_raw,
     "clean": clean_data,
     "check": check,

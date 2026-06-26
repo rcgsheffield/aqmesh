@@ -11,7 +11,7 @@ from prefect import flow, get_run_logger, task
 
 from ..config import Settings, get_settings
 from ..models import Param
-from ..storage import clean_csv_path, read_raw_readings, write_clean_csv
+from ..storage import clean_csv_path, load_assets, read_raw_readings, write_clean_csv
 from ..transform import clean_readings
 
 
@@ -40,13 +40,26 @@ def clean_data(settings: Settings | None = None) -> list[dict]:
     results: list[dict] = []
 
     logger.info("raw_dir: %s (exists=%s)", settings.raw_dir, settings.raw_dir.exists())
-    if not settings.raw_dir.exists():
-        logger.warning("raw_dir does not exist — has ingest run successfully yet?")
+
+    assets = load_assets(settings)
+    if assets:
+        location_numbers = sorted(a["location_number"] for a in assets)
+        logger.info("Processing %d location(s) from asset registry.", len(location_numbers))
+    elif settings.raw_dir.exists():
+        location_numbers = sorted(
+            int(d.name.split("=", 1)[1])
+            for d in settings.raw_dir.glob("location=*")
+        )
+        logger.info(
+            "No asset registry found; discovered %d location(s) from raw store.",
+            len(location_numbers),
+        )
+    else:
+        logger.warning("raw_dir does not exist and no asset registry found — has ingest run?")
         logger.info("Clean complete: wrote 0 CSV file(s).")
         return results
 
-    for loc_dir in sorted(settings.raw_dir.glob("location=*")):
-        location_number = int(loc_dir.name.split("=", 1)[1])
+    for location_number in location_numbers:
         for param in (Param.GAS, Param.PARTICLE):
             results.append(clean_location_param(settings, location_number, param))
 

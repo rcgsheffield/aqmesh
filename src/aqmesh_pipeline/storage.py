@@ -26,6 +26,7 @@ from .models import Param
 logger = logging.getLogger(__name__)
 
 POINTERS_FILENAME = "pointers.json"
+ASSETS_FILENAME = "assets.json"
 
 
 # -- path helpers --------------------------------------------------------
@@ -43,6 +44,10 @@ def clean_csv_path(settings: Settings, location_number: int, param: Param) -> Pa
 
 def pointers_path(settings: Settings) -> Path:
     return settings.state_dir / POINTERS_FILENAME
+
+
+def assets_path(settings: Settings) -> Path:
+    return settings.state_dir / ASSETS_FILENAME
 
 
 # -- raw store -----------------------------------------------------------
@@ -91,6 +96,34 @@ def read_raw_readings(settings: Settings, location_number: int, param: Param) ->
 def write_clean_csv(df: pd.DataFrame, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(path, index=False)
+
+
+# -- clean store ---------------------------------------------------------
+def write_location_info(settings: Settings, asset_data: dict) -> Path:
+    """Write asset+sensor metadata to clean/location=<n>/info.json."""
+    dir_ = settings.clean_dir / f"location={asset_data['location_number']}"
+    dir_.mkdir(parents=True, exist_ok=True)
+    path = dir_ / "info.json"
+    path.write_text(json.dumps(asset_data, indent=2, sort_keys=True), encoding="utf-8")
+    return path
+
+
+# -- state / assets ------------------------------------------------------
+def save_assets(settings: Settings, assets: list[dict]) -> None:
+    """Persist the full asset+sensor snapshot (atomic write)."""
+    path = assets_path(settings)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(assets, indent=2, sort_keys=True), encoding="utf-8")
+    tmp.replace(path)
+
+
+def load_assets(settings: Settings) -> list[dict]:
+    """Return the persisted asset list, or [] if not yet written."""
+    path = assets_path(settings)
+    if not path.exists():
+        return []
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 # -- state / pointers ----------------------------------------------------
