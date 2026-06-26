@@ -11,7 +11,7 @@ Usage::
     aqmesh sensors       # report sensor age/expiry/failures across the fleet (read-only)
     aqmesh repeat        # re-ingest the last delivered batch (does not advance cursor)
 
-The ``clean`` and ``pipeline`` commands also write a 5-minute resampled CSV per
+The ``clean`` and ``pipeline`` commands also write a daily resampled CSV per
 location/param under ``resampled/`` by default; pass ``--no-resample`` to skip it.
 """
 
@@ -383,7 +383,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument(
         "--no-resample",
         action="store_true",
-        help="Skip the 5-minute resampled CSV output (clean/pipeline only).",
+        help="Skip the daily resampled CSV output (clean/pipeline only).",
     )
     args = parser.parse_args(argv_list)
     logging.basicConfig(

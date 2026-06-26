@@ -54,9 +54,9 @@ uv run aqmesh ping            # server health & data freshness (no credentials n
 uv run aqmesh sensors         # fleet sensor age/expiry/failures
 ```
 
-`clean` (and `pipeline`) write the per-reading CSVs to `clean/` and, by default, a 5-minute
-resampled copy to `resampled/`. Resampled bins are the **mean** of the readings in each wall-clock
-5-minute window; windows with no readings are left empty (`NaN`, no forward-fill). Pass
+`clean` (and `pipeline`) write the per-reading CSVs to `clean/` and, by default, a daily
+resampled copy to `resampled/`. Resampled bins are the **mean** of the readings in each calendar
+day (UTC midnight); days with no readings are left empty (`NaN`, no forward-fill). Pass
 `--no-resample` to produce the per-reading CSVs only.
 
 > [!WARNING]
