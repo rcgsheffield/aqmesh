@@ -10,6 +10,7 @@ from unittest.mock import Mock
 
 import httpx
 import pandas as pd
+import pytest
 import respx
 
 from aqmesh_pipeline.flows.clean import clean_data
@@ -196,6 +197,15 @@ def test_clean_data_no_raw_is_noop(settings):
     # raw_dir does not exist yet -> nothing to clean.
     results = clean_data(settings)
     assert results == []
+
+
+@respx.mock
+def test_clean_raises_when_asset_registry_is_empty(settings):
+    _allow_prefect()
+    # assets.json present but empty (e.g. API returned zero pods) -> fail fast.
+    save_assets(settings, [])
+    with pytest.raises(RuntimeError, match="Asset registry.*empty"):
+        clean_data(settings)
 
 
 @respx.mock

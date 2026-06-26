@@ -15,6 +15,7 @@ from ..config import Settings, get_settings
 from ..metadata import build_metadata
 from ..models import Asset, Param
 from ..storage import (
+    assets_path,
     clean_csv_path,
     clean_metadata_path,
     load_assets,
@@ -65,6 +66,11 @@ def clean_data(settings: Settings | None = None) -> list[dict]:
     logger.info("raw_dir: %s (exists=%s)", settings.raw_dir, settings.raw_dir.exists())
 
     assets = load_assets(settings)
+    if not assets and assets_path(settings).exists():
+        raise RuntimeError(
+            "Asset registry (assets.json) exists but is empty — the API returned no pods. "
+            "Check credentials and re-run the metadata/ingest stages."
+        )
     if assets:
         location_numbers = sorted(assets.keys())
         logger.info("Processing %d location(s) from asset registry.", len(location_numbers))
