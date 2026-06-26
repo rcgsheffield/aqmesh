@@ -97,6 +97,8 @@ def test_ingest_raw_writes_data_and_pointers(settings, assets_payload, gas_batch
     assert "raw-gas-510" in resources
     assert resources["raw-gas-510"]["last_reading_number"] == 3256955
     assert resources["raw-gas-510"]["location_name"] == "Sheffield City Centre"
+    assert resources["raw-gas-510"]["status_this_run"] == "ok"
+    assert resources["raw-gas-510"]["new_readings_this_run"] == len(gas_batch)
 
 
 @respx.mock
@@ -177,6 +179,63 @@ def test_ingest_raw_skips_404_locations(
     assert "915" not in pointers
     # The healthy location still recorded its progress.
     assert pointers["510"]["gas"]["new_readings"] == len(gas_batch)
+
+
+@respx.mock
+def test_descriptor_marks_404_pod_offline(settings, assets_payload, gas_batch, particle_batch):
+    """Previously-live pod that now 404s must appear in the descriptor with
+    status_this_run='not_found', not silently retain a stale last_reading_number."""
+    from aqmesh_pipeline.storage import save_pointers
+
+    # Pre-seed pointers as if location 915 had prior successful readings.
+    save_pointers(
+        settings,
+        {
+            "915": {
+                "gas": {
+                    "last_reading_number": 99999,
+                    "last_datestamp": "2025-01-01T00:00:00",
+                    "new_readings": 10,
+                },
+                "particle": {
+                    "last_reading_number": 99998,
+                    "last_datestamp": "2025-01-01T00:00:00",
+                    "new_readings": 8,
+                },
+            }
+        },
+    )
+    _allow_prefect()
+    respx.post(f"{settings.base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"token": "tok"})
+    )
+    respx.get(f"{settings.base_url}/Pods/Assets_V1").mock(
+        return_value=httpx.Response(200, json=assets_payload)
+    )
+    for param in (Param.GAS, Param.PARTICLE):
+        respx.get(f"{settings.base_url}/LocationData/Next/510/{int(param)}/01/1").mock(
+            side_effect=[
+                httpx.Response(200, json=gas_batch if param == Param.GAS else particle_batch),
+                httpx.Response(204),
+            ]
+        )
+        respx.get(f"{settings.base_url}/LocationData/Next/915/{int(param)}/01/1").mock(
+            return_value=httpx.Response(404)
+        )
+
+    ingest_raw(settings)
+
+    desc = yaml.safe_load(raw_store_descriptor_path(settings).read_text())
+    resources = {r["name"]: r for r in desc["resources"]}
+
+    # Offline pod must signal its status clearly.
+    assert resources["raw-gas-915"]["status_this_run"] == "not_found"
+    assert resources["raw-gas-915"]["new_readings_this_run"] == 0
+    # Stale pointer is preserved (not advanced by the failed poll).
+    assert resources["raw-gas-915"]["last_reading_number"] == 99999
+
+    # Healthy pod still shows ok.
+    assert resources["raw-gas-510"]["status_this_run"] == "ok"
 
 
 @respx.mock

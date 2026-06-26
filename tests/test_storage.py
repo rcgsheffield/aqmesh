@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+
 import yaml
 
 from aqmesh_pipeline.models import Param

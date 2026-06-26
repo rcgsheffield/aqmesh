@@ -189,7 +189,9 @@ def test_build_raw_store_descriptor_failed_param(settings):
     desc = build_raw_store_descriptor(_ASSETS, pointers, summaries, settings, _GENERATED_AT)
 
     resources = {r["name"]: r for r in desc["resources"]}
-    assert "new_readings_this_run" not in resources["raw-gas-510"]
+    assert resources["raw-gas-510"]["status_this_run"] == "failed"
+    assert resources["raw-gas-510"]["new_readings_this_run"] == 0
+    assert resources["raw-particle-510"]["status_this_run"] == "ok"
     assert resources["raw-particle-510"]["new_readings_this_run"] == 1
 
 

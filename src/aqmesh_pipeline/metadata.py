@@ -226,7 +226,8 @@ def build_raw_store_descriptor(
             }
 
             summary = summary_index.get((loc_num, param.label))
-            if summary and summary.get("status") == "ok":
+            if summary:
+                resource["status_this_run"] = summary["status"]
                 resource["new_readings_this_run"] = summary["new_readings"]
 
             resources.append(resource)
