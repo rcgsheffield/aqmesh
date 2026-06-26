@@ -29,12 +29,12 @@ if TYPE_CHECKING:
 #   1. reading_status legend — only "OK" is seen in sample data; full set unknown.
 #   2. pm_tpc units — confirmed ug/m3 (mass concentration, same as other PM channels);
 #      empirical mean ~6.1 rules out count/cm3 (ambient counts are hundreds–thousands/cm3).
-#   3. eo species — assumed ethylene oxide.
+#   3. eo species — confirmed Ethylene Oxide (EO); AQMesh technical spec v7.0, footnote #11:
+#      "Values are based on testing for Ethylene Oxide (EO)".
 #   4. temperature_f — assumed Fahrenheit (field name + sample values support this).
 # ---------------------------------------------------------------------------
 
 #: Human-readable description for each output column.
-# TODO(#58): confirm the "eo" species against the AQMesh manual (assumed ethylene oxide).
 COLUMN_DESCRIPTIONS: dict[str, str] = {
     # Identity / base columns.
     "location_number": "AQMesh location (site) identifier",
