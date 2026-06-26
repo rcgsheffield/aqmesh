@@ -6,6 +6,7 @@ HTTP is mocked with respx; flows run against the session's prefect_test_harness.
 from __future__ import annotations
 
 import json
+from unittest.mock import Mock
 
 import httpx
 import pandas as pd
@@ -304,3 +305,26 @@ def test_pipeline_end_to_end(monkeypatch, tmp_path, assets_payload, gas_batch, p
 
     saved = load_assets(S(username="test-user", password="test-pass", data_root=tmp_path))
     assert set(saved.keys()) == {510, 915}
+
+
+@respx.mock
+def test_pipeline_continues_when_metadata_sync_fails(
+    monkeypatch, tmp_path, assets_payload, gas_batch, particle_batch
+):
+    """ingest_raw() must run even when sync_location_metadata() raises."""
+    monkeypatch.setenv("AQMESH_USERNAME", "test-user")
+    monkeypatch.setenv("AQMESH_PASSWORD", "test-pass")
+    monkeypatch.setenv("AQMESH_ENVIRONMENT", "test")
+    monkeypatch.setenv("AQMESH_DATA_ROOT", str(tmp_path))
+
+    monkeypatch.setattr(
+        "aqmesh_pipeline.flows.pipeline.sync_location_metadata",
+        Mock(side_effect=RuntimeError("sensor-detail 500")),
+    )
+
+    base_url = "https://apitest.aqmeshdata.net/api"
+    _mock_api(base_url, assets_payload, gas_batch, particle_batch)
+
+    result = pipeline()
+
+    assert result["ingest"]["locations"] > 0

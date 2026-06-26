@@ -13,7 +13,10 @@ from .metadata import sync_location_metadata
 def pipeline() -> dict:
     """Run the full pipeline: sync metadata, download raw readings, then produce cleaned CSVs."""
     logger = get_run_logger()
-    sync_location_metadata()
+    try:
+        sync_location_metadata()
+    except Exception:
+        logger.warning("Metadata sync failed — continuing with ingest.")
     ingest_summary = ingest_raw()
     clean_results = clean_data()
     logger.info("Pipeline finished.")
