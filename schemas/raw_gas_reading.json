@@ -33,9 +33,13 @@
       "format": "date-time",
       "description": "UTC timestamp of the reading, ISO 8601 format (e.g. 2019-04-19T09:15:00)."
     },
+    "temperature_c": {
+      "type": ["number", "null"],
+      "description": "Ambient temperature, degrees Celsius."
+    },
     "temperature_f": {
       "type": ["number", "null"],
-      "description": "Ambient temperature, degrees Fahrenheit."
+      "description": "Ambient temperature, degrees Fahrenheit. Present on some firmware versions."
     },
     "pressure": {
       "type": ["number", "null"],

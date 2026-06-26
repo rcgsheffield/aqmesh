@@ -143,6 +143,7 @@ def gas_batch() -> list[dict]:
         "h2s_prescaled": -1000.00,
         "h2s_slope": None,
         "h2s_offset": None,
+        "temperature_c": 12.6,
         "temperature_f": 54.7,
         "pressure": 1024.5,
         "humidity": 69.5,
