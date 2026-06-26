@@ -14,7 +14,7 @@ graph LR
     API["AQMesh API"] -->|Fetch| PY1["client.py"]
     PY1 -->|Pass data| PY2["flows/ingest.py"]
     PY2 -->|Append-only JSON| RAW[("raw/")]
-    
+
     RAW -->|Read| PY3["flows/clean.py"]
     PY3 -->|Calibrated CSVs| CLEAN[("clean/")]
 
@@ -46,12 +46,18 @@ uv run pytest                 # tests
 uv run aqmesh ingest          # download raw data only
 uv run aqmesh clean           # rebuild CSVs from the raw store
 uv run aqmesh pipeline        # ingest + clean (default)
+uv run aqmesh clean --no-resample   # skip the daily resampled output
 
 # Read-only diagnostics (make no changes):
 uv run aqmesh check           # auth + list pods + server freshness/notices
 uv run aqmesh ping            # server health & data freshness (no credentials needed)
 uv run aqmesh sensors         # fleet sensor age/expiry/failures
 ```
+
+`clean` (and `pipeline`) write the per-reading CSVs to `clean/` and, by default, a 5-minute
+resampled copy to `resampled/`. Resampled bins are the **mean** of the readings in each wall-clock
+5-minute window; windows with no readings are left empty (`NaN`, no forward-fill). Pass
+`--no-resample` to produce the per-reading CSVs only.
 
 > [!WARNING]
 > Always use **test credentials** (`AQMESH_ENVIRONMENT=test`) when running the pipeline

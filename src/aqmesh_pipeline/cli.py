@@ -10,6 +10,9 @@ Usage::
     aqmesh ping          # server health/freshness probe (no credentials required)
     aqmesh sensors       # report sensor age/expiry/failures across the fleet (read-only)
     aqmesh repeat        # re-ingest the last delivered batch (does not advance cursor)
+
+The ``clean`` and ``pipeline`` commands also write a 5-minute resampled CSV per
+location/param under ``resampled/`` by default; pass ``--no-resample`` to skip it.
 """
 
 from __future__ import annotations
@@ -377,11 +380,19 @@ def main(argv: Sequence[str] | None = None) -> None:
         choices=_COMMANDS.keys(),
         help="Which flow to run (default: pipeline).",
     )
+    parser.add_argument(
+        "--no-resample",
+        action="store_true",
+        help="Skip the 5-minute resampled CSV output (clean/pipeline only).",
+    )
     args = parser.parse_args(argv_list)
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
     )
-    _COMMANDS[args.command]()
+    if args.command in ("clean", "pipeline"):
+        _COMMANDS[args.command](resample=not args.no_resample)
+    else:
+        _COMMANDS[args.command]()
 
 
 if __name__ == "__main__":

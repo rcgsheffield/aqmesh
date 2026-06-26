@@ -8,7 +8,7 @@ Two cleaning steps are applied (manual sections 4.12-4.15):
    measurement via ``value = prescaled * slope + offset``.
 
 The output is one tidy row per ``reading_datestamp`` with one column per pollutant.
-5-minute resampling is intentionally deferred (see :func:`resample_5min`).
+:func:`resample_daily` optionally aggregates this onto a regular daily grid.
 """
 
 from __future__ import annotations
@@ -148,16 +148,63 @@ def clean_readings(df: pd.DataFrame, param: Param) -> pd.DataFrame:
     return clean_gas(df) if param is Param.GAS else clean_particle(df)
 
 
-def resample_5min(df: pd.DataFrame, freq: str = "5min") -> pd.DataFrame:  # noqa: ARG001
-    """DEFERRED: resample cleaned readings onto regular 5-minute buckets.
+#: Identity columns that are constant within one location/param frame and are
+#: carried through resampling unchanged rather than averaged.
+_IDENTITY_COLS = ("location_number", "pod_serial_number")
 
-    This is the planned next extension. The intended behaviour (to be confirmed
-    with researchers): build a regular ``freq`` time index per pod, aggregate
-    readings falling in each bucket (mean for concentrations), and mark empty
-    buckets as missing. Not implemented yet -- the pipeline currently emits
-    per-reading cleaned data only.
+
+def _join_distinct(values: pd.Series) -> object:
+    """Join the distinct non-null values in a bin into a single ``;``-separated string.
+
+    Used to aggregate non-numeric columns (e.g. ``reading_status``) that cannot be
+    averaged. Returns ``NaN`` for an empty bin so it reads the same as an empty
+    numeric bin.
     """
-    raise NotImplementedError(
-        "5-minute resampling is deferred; see the project plan. "
-        "Cleaned per-reading data is produced by clean_readings()."
-    )
+    distinct = values.dropna().unique()
+    if len(distinct) == 0:
+        return float("nan")
+    return ";".join(sorted(str(v) for v in distinct))
+
+
+def resample_daily(df: pd.DataFrame, freq: str = "1D") -> pd.DataFrame:
+    """Resample a cleaned location/param frame onto a regular daily grid.
+
+    Expects the output of :func:`clean_readings` for a single pod: a frame with a
+    ``reading_datestamp`` column and one column per pollutant. Every column is
+    carried through -- nothing is filtered out, so researchers can decide what to
+    work with. Within each ``freq`` bucket, numeric columns are averaged (the
+    bucket value is the **mean** of the readings it contains, ignoring missing
+    values) and non-numeric columns (e.g. ``reading_status``) are aggregated to the
+    ``;``-joined distinct values seen in the bucket. Buckets that contain no
+    readings become ``NaN`` -- there is no forward-fill. Buckets are aligned to
+    UTC midnight (00:00) for the default daily grid.
+
+    ``location_number`` and ``pod_serial_number`` are constant within the frame and
+    are preserved as leading columns (keeping their original dtype rather than being
+    coerced to a float average).
+
+    Args:
+        df: Cleaned readings for one location/param, as returned by
+            :func:`clean_readings`.
+        freq: A pandas offset alias for the bucket width (default ``"1D"``).
+
+    Returns:
+        A frame with one row per ``freq`` bucket from the first to the last
+        reading, carrying every (aggregated) column. Empty in -> empty out.
+    """
+    if df.empty:
+        return df
+
+    identity = {col: df[col].iloc[0] for col in _IDENTITY_COLS if col in df.columns}
+    indexed = df.set_index("reading_datestamp").sort_index()
+
+    agg = {
+        col: ("mean" if pd.api.types.is_numeric_dtype(indexed[col]) else _join_distinct)
+        for col in indexed.columns
+        if col not in _IDENTITY_COLS
+    }
+    resampled = indexed.resample(freq).agg(agg)
+
+    for offset, (col, value) in enumerate(identity.items()):
+        resampled.insert(offset, col, value)
+    return resampled.reset_index()

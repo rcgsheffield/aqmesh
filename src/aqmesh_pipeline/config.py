@@ -61,6 +61,10 @@ class Settings(BaseSettings):
         return self.data_root / "clean"
 
     @property
+    def resampled_dir(self) -> Path:
+        return self.data_root / "resampled"
+
+    @property
     def state_dir(self) -> Path:
         return self.data_root / "state"
 

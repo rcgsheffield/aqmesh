@@ -44,6 +44,14 @@ def clean_csv_path(settings: Settings, location_number: int, param: Param) -> Pa
     )
 
 
+def resampled_csv_path(settings: Settings, location_number: int, param: Param) -> Path:
+    return (
+        settings.resampled_dir
+        / f"location={location_number}"
+        / f"aqmesh_{location_number}_{param.label}_daily.csv"
+    )
+
+
 def clean_metadata_path(settings: Settings, location_number: int, param: Param) -> Path:
     """Sidecar data-dictionary path sitting next to the clean CSV (issue #58)."""
     return clean_csv_path(settings, location_number, param).with_suffix(".metadata.json")
