@@ -5,14 +5,23 @@ HTTP is mocked with respx; flows run against the session's prefect_test_harness.
 
 from __future__ import annotations
 
+import json
+
 import httpx
+import pandas as pd
 import respx
 
 from aqmesh_pipeline.flows.clean import clean_data
 from aqmesh_pipeline.flows.ingest import ingest_raw
 from aqmesh_pipeline.flows.pipeline import pipeline
 from aqmesh_pipeline.models import Param
-from aqmesh_pipeline.storage import clean_csv_path, load_pointers, raw_param_dir
+from aqmesh_pipeline.storage import (
+    assets_path,
+    clean_csv_path,
+    clean_metadata_path,
+    load_pointers,
+    raw_param_dir,
+)
 
 
 def _allow_prefect():
@@ -51,6 +60,11 @@ def test_ingest_raw_writes_data_and_pointers(settings, assets_payload, gas_batch
     pointers = load_pointers(settings)
     assert pointers["510"]["gas"]["new_readings"] == len(gas_batch)
     assert pointers["510"]["gas"]["last_reading_number"] == 3256955
+
+    # Asset snapshot persisted so the offline clean stage can read provenance.
+    assert assets_path(settings).exists()
+    snapshot = {a["location_number"] for a in json.loads(assets_path(settings).read_text())}
+    assert snapshot == {510, 915}
 
 
 @respx.mock
@@ -142,6 +156,20 @@ def test_clean_data_writes_one_csv_per_param(seed_raw):
     assert len(written) == 2  # gas + particle for location 510
     assert clean_csv_path(seed_raw, 510, Param.GAS).exists()
     assert clean_csv_path(seed_raw, 510, Param.PARTICLE).exists()
+
+    # Each CSV has a sibling metadata sidecar whose columns match the CSV header.
+    for param in (Param.GAS, Param.PARTICLE):
+        meta_path = clean_metadata_path(seed_raw, 510, param)
+        assert meta_path.exists()
+        meta = json.loads(meta_path.read_text())
+        csv_cols = list(pd.read_csv(clean_csv_path(seed_raw, 510, param)).columns)
+        assert set(meta["columns"]) == set(csv_cols)
+        # Provenance flowed from the persisted asset snapshot.
+        assert meta["provenance"]["location_name"] == "Sheffield City Centre"
+        assert meta["provenance"]["latitude"] == 53.38
+    # Gas units came from the raw <sp>_units field.
+    gas_meta = json.loads(clean_metadata_path(seed_raw, 510, Param.GAS).read_text())
+    assert gas_meta["columns"]["co"]["units"] == "ppb"
 
 
 @respx.mock

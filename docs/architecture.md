@@ -26,7 +26,8 @@ CLI: aqmesh pipeline | ingest | clean | check
 | `config.py` | Pydantic settings loaded from environment (`.env`); defines `AQMESH_USERNAME`, `AQMESH_PASSWORD`, `AQMESH_ENVIRONMENT`, `AQMESH_DATA_ROOT` |
 | `client.py` | AQMesh API client: bearer-token auth with auto-refresh, pod listing via `/Pods/Assets_V1`, cursor-style data iteration via `/LocationData/Next/…` |
 | `models.py` | Data models and type definitions: `Param` enum (gas/particle), `Asset` (pod metadata), sentinel constants |
-| `storage.py` | Raw store I/O — reading and writing JSON batches, CSVs, and the `state/pointers.json` cursor file |
+| `storage.py` | Raw store I/O — reading and writing JSON batches, CSVs, metadata sidecars, and the `state/pointers.json` cursor + `state/assets.json` snapshot |
+| `metadata.py` | Builds the per-CSV metadata sidecar (column units/descriptions, provenance, `reading_status` legend) |
 | `transform.py` | Data cleaning: deduplication by reading number, sentinel → NaN conversion, calibration (`prescaled × slope + offset`) |
 | `flows/ingest.py` | Prefect flow: authenticates, lists pods, downloads per-location/param data, writes to raw store |
 | `flows/clean.py` | Prefect flow: reads all raw files per location, deduplicates, cleans, writes per-param CSVs |
@@ -55,11 +56,20 @@ raw/
 clean/
   location=<n>/
     aqmesh_<n>_gas.csv              # scaled readings, sentinels → NaN
+    aqmesh_<n>_gas.metadata.json    # sidecar data dictionary (units, provenance, legend)
     aqmesh_<n>_particle.csv
+    aqmesh_<n>_particle.metadata.json
 
 state/
   pointers.json                     # cursor per location/param pair — safe to restart mid-run
+  assets.json                       # asset snapshot from ingest; read by the offline clean stage
 ```
+
+Each clean CSV is paired with a `.metadata.json` sidecar (issue #58) documenting each column
+(description, units, calibrated flag), the processing applied, a `reading_status` legend, and
+per-run provenance (location name, coordinates, pod serial, firmware). Gas units are read from
+the raw `<sp>_units` fields; the clean stage stays offline by reading `state/assets.json` rather
+than re-calling the API.
 
 Raw files are never modified or deleted — the clean step always rebuilds from scratch.
 

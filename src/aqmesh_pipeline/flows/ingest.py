@@ -17,7 +17,13 @@ from prefect.cache_policies import NO_CACHE
 from ..client import AQMeshClient
 from ..config import Settings, get_settings
 from ..models import READING_DATESTAMP_FIELD, Param
-from ..storage import load_pointers, save_pointers, update_pointer, write_raw_batch
+from ..storage import (
+    load_pointers,
+    save_assets,
+    save_pointers,
+    update_pointer,
+    write_raw_batch,
+)
 
 
 @task(retries=3, retry_delay_seconds=30, cache_policy=NO_CACHE)
@@ -106,6 +112,8 @@ def ingest_raw(settings: Settings | None = None) -> dict:
     with AQMeshClient(settings) as client:
         client.authenticate()
         assets = client.get_assets()
+        # Snapshot the assets so the offline clean stage can read location provenance.
+        save_assets(settings, assets)
         logger.info("Discovered %d locations.", len(assets))
         if not assets:
             logger.warning("No locations returned by the API — check environment/credentials.")
