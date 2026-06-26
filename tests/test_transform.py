@@ -31,8 +31,7 @@ def test_clean_gas_blanks_sentinels(gas_batch):
 def test_clean_gas_sorted_and_has_metadata(gas_batch):
     cleaned = clean_readings(pd.DataFrame(gas_batch), Param.GAS)
     assert list(cleaned["reading_number"]) == [3256954, 3256955]
-    assert pd.api.types.is_datetime64_any_dtype(cleaned["reading_datestamp"])
-    assert cleaned["reading_datestamp"].dt.tz is not None  # always UTC-aware
+    assert str(cleaned["reading_datestamp"].dt.tz) == "UTC"
     assert "temperature_c" in cleaned.columns
     assert "temperature_f" in cleaned.columns
 
