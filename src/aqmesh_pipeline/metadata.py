@@ -22,17 +22,6 @@ from .models import GAS_SPECIES, PARTICLE_CHANNELS, Asset, Param
 if TYPE_CHECKING:
     from .config import Settings
 
-# ---------------------------------------------------------------------------
-# UNVERIFIED PLACEHOLDERS — confirm against the AQMesh manual before merge (issue #58).
-# Each item below is also marked with an inline `TODO(#58)`. Until confirmed, the
-# emitted metadata reflects best-guess values:
-#   1. reading_status legend — only "OK" is seen in sample data; full set unknown.
-#   2. pm_tpc units — confirmed ug/m3 (mass concentration, same as other PM channels);
-#      empirical mean ~6.1 rules out count/cm3 (ambient counts are hundreds–thousands/cm3).
-#   3. eo species — confirmed Ethylene Oxide (EO); AQMesh technical spec v7.0, footnote #11:
-#      "Values are based on testing for Ethylene Oxide (EO)".
-#   4. temperature_f — assumed Fahrenheit (field name + sample values support this).
-# ---------------------------------------------------------------------------
 
 #: Human-readable description for each output column.
 COLUMN_DESCRIPTIONS: dict[str, str] = {
@@ -66,7 +55,6 @@ COLUMN_DESCRIPTIONS: dict[str, str] = {
 }
 
 #: Units known statically (independent of the raw payload).
-# TODO(#58): confirm temperature_f is Fahrenheit.
 STATIC_UNITS: dict[str, str | None] = {
     "pm1": "ug/m3",
     "pm2_5": "ug/m3",
@@ -86,10 +74,21 @@ STATIC_UNITS: dict[str, str | None] = {
 CALIBRATED_COLUMNS: frozenset[str] = frozenset(GAS_SPECIES) | frozenset(PARTICLE_CHANNELS)
 
 #: Meaning of the ``reading_status`` string values.
-# TODO(#58): populate the full legend from the AQMesh manual; only "OK" is
-# observed in sample data so far.
+#: Applies to particle readings only (API §4.12). Source: API instructions v2.17.
 READING_STATUS_LEGEND: dict[str, str] = {
-    "OK": "Reading nominal",
+    "OK": "Reading nominal — no issue detected",
+    "Deliquescence": (
+        "Outlying values due to hygroscopic particle size growth (high humidity); "
+        "readings are available but should be treated as potentially unreliable"
+    ),
+    "Misread": (
+        "Particle or noise sensor unable to transfer valid data; "
+        "affected values are set to missing"
+    ),
+    "Other Fault Zero": (
+        "Particle counter unable to provide a valid reading following a power-cycle "
+        "or settings change; affected values are set to missing"
+    ),
 }
 
 

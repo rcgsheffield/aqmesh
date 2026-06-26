@@ -54,6 +54,22 @@ missing (`NaN`). Defined as `GAS_SENTINELS` / `PARTICLE_SENTINELS` in
 Each sensor also carries a `<species>_state` (e.g. `"Reading"`, `"Stabilizing"`,
 `"Not Fitted"`) describing why a value may be obscured.
 
+## `reading_status` field (particle readings only)
+
+Particle readings carry a `reading_status` string field separate from the numeric
+sentinel mechanism above. All four observed values (confirmed against production
+data and API instructions v2.17 §4.12):
+
+| `reading_status` | Prescaled sentinel | Meaning |
+| --- | --- | --- |
+| `"OK"` | estimated reading | No issue detected |
+| `"Deliquescence"` | estimated reading | Outlying values due to hygroscopic particle size growth at high humidity; readings available but potentially unreliable |
+| `"Misread"` | `-893` | Particle or noise sensor unable to transfer valid data; values set to missing |
+| `"Other Fault Zero"` | `-892` | Particle counter unable to provide a valid reading after a power-cycle or settings change; values set to missing |
+
+The full legend is also embedded in the sidecar metadata JSON under `reading_status_legend`
+(see [`metadata.py`](../../src/aqmesh_pipeline/metadata.py) `READING_STATUS_LEGEND`).
+
 ---
 
 Next: [authentication](authentication.md) · [assets](assets.md) · [diagnostics](diagnostics.md)
