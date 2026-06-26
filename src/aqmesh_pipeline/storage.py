@@ -21,6 +21,7 @@ import logging
 from pathlib import Path
 
 import pandas as pd
+from ruamel.yaml import YAML
 
 from .config import Settings
 from .models import Asset, Param
@@ -80,6 +81,11 @@ def clean_csvw_path(settings: Settings, location_number: int, param: Param) -> P
     """
     csv = clean_csv_path(settings, location_number, param)
     return csv.with_name(csv.name + "-metadata.json")
+
+
+def raw_store_descriptor_path(settings: Settings) -> Path:
+    """Frictionless datapackage descriptor for the entire raw store (issue #69)."""
+    return settings.raw_dir / "datapackage.yaml"
 
 
 def pointers_path(settings: Settings) -> Path:
@@ -153,6 +159,16 @@ def write_clean_csvw(csvw: dict, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
     tmp.write_text(json.dumps(csvw, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def write_raw_store_descriptor(descriptor: dict, path: Path) -> None:
+    """Write the Frictionless datapackage descriptor for the raw store atomically (issue #69)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".yaml.tmp")
+    yaml = YAML()
+    yaml.default_flow_style = False
+    with tmp.open("w", encoding="utf-8") as f:
+        yaml.dump(descriptor, f)
     tmp.replace(path)
 
 

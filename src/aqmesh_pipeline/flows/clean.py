@@ -56,6 +56,10 @@ def clean_location_param(
             "csvw": None,
         }
     cleaned = clean_readings(raw, param)
+    # Compute before any writes so a resample failure leaves no partial output on disk,
+    # making retries genuinely clean and the failed-task state consistent.
+    resampled = resample_daily(cleaned) if resample else None
+
     path = clean_csv_path(settings, location_number, param)
     write_clean_csv(cleaned, path)
 
@@ -68,9 +72,9 @@ def clean_location_param(
     write_clean_csvw(csvw, csvw_path)
 
     resampled_path = None
-    if resample:
+    if resampled is not None:
         resampled_path = resampled_csv_path(settings, location_number, param)
-        write_clean_csv(resample_daily(cleaned), resampled_path)
+        write_clean_csv(resampled, resampled_path)
 
     return {
         "location_number": location_number,
@@ -120,7 +124,7 @@ def clean_data(settings: Settings | None = None, resample: bool = True) -> list[
 
     for location_number in location_numbers:
         asset = assets.get(location_number)
-        for param in (Param.GAS, Param.PARTICLE):
+        for param in list(Param):
             results.append(clean_location_param(settings, location_number, param, asset, resample))
 
     written = sum(1 for r in results if r["csv"])
