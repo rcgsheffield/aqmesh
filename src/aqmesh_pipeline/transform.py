@@ -34,7 +34,8 @@ _PARTICLE_PASSTHROUGH = (
     "super_cap_voltage",
     "reading_status",
 )
-# Temperature columns are always emitted so the output schema is consistent across firmware variants.
+# Temperature columns are always emitted so the output schema is consistent
+# across firmware variants.
 _TEMPERATURE_COLS: frozenset[str] = frozenset({"temperature_c", "temperature_f"})
 
 
