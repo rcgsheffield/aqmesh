@@ -32,6 +32,7 @@ def test_clean_gas_sorted_and_has_metadata(gas_batch):
     cleaned = clean_readings(pd.DataFrame(gas_batch), Param.GAS)
     assert list(cleaned["reading_number"]) == [3256954, 3256955]
     assert pd.api.types.is_datetime64_any_dtype(cleaned["reading_datestamp"])
+    assert cleaned["reading_datestamp"].dt.tz is not None  # always UTC-aware
     assert "temperature_c" in cleaned.columns
     assert "temperature_f" in cleaned.columns
 
@@ -53,9 +54,9 @@ def test_clean_empty_returns_empty():
 
 
 def _cleaned_frame(rows: list[dict]) -> pd.DataFrame:
-    """Build a cleaned-style frame (datetime reading_datestamp) from row dicts."""
+    """Build a cleaned-style frame (UTC-aware reading_datestamp) from row dicts."""
     df = pd.DataFrame(rows)
-    df["reading_datestamp"] = pd.to_datetime(df["reading_datestamp"])
+    df["reading_datestamp"] = pd.to_datetime(df["reading_datestamp"], utc=True)
     return df
 
 
@@ -80,7 +81,7 @@ def test_resample_daily_averages_within_bin():
     )
     out = resample_daily(df)
     assert len(out) == 1
-    assert out.loc[0, "reading_datestamp"] == pd.Timestamp("2026-01-01")
+    assert out.loc[0, "reading_datestamp"] == pd.Timestamp("2026-01-01", tz="UTC")
     assert out.loc[0, "co"] == pytest.approx(15.0)
 
 
@@ -106,9 +107,9 @@ def test_resample_daily_empty_bins_are_nan_and_midnight_aligned():
     out = resample_daily(df).set_index("reading_datestamp")
     # Bins aligned to UTC midnight, spanning first to last reading.
     assert list(out.index) == [
-        pd.Timestamp("2026-01-01"),
-        pd.Timestamp("2026-01-02"),
-        pd.Timestamp("2026-01-03"),
+        pd.Timestamp("2026-01-01", tz="UTC"),
+        pd.Timestamp("2026-01-02", tz="UTC"),
+        pd.Timestamp("2026-01-03", tz="UTC"),
     ]
     assert out.loc["2026-01-01", "co"] == pytest.approx(10.0)
     # Day with no readings is NaN (no forward-fill).
@@ -202,3 +203,32 @@ def test_resample_daily_skips_nan_within_bin():
 
 def test_resample_daily_empty_returns_empty():
     assert resample_daily(pd.DataFrame()).empty
+
+
+def test_resample_daily_utc_alignment_across_dst():
+    # Readings straddle the Europe/London spring-forward (2026-03-29 01:00 UTC,
+    # clocks jump from 01:00 to 02:00 BST).  In local BST the second reading
+    # appears at 03:30, which could naively be placed on a different wall-clock
+    # day.  UTC bins must keep both readings in the same day (2026-03-29 UTC).
+    df = _cleaned_frame(
+        [
+            {
+                "location_number": 510,
+                "pod_serial_number": 1,
+                "reading_number": 1,
+                "reading_datestamp": "2026-03-29T00:30:00+00:00",
+                "co": 10.0,
+            },
+            {
+                "location_number": 510,
+                "pod_serial_number": 1,
+                "reading_number": 2,
+                "reading_datestamp": "2026-03-29T02:30:00+00:00",
+                "co": 20.0,
+            },
+        ]
+    )
+    out = resample_daily(df)
+    assert len(out) == 1
+    assert out.loc[0, "reading_datestamp"] == pd.Timestamp("2026-03-29", tz="UTC")
+    assert out.loc[0, "co"] == pytest.approx(15.0)

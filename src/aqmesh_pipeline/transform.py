@@ -68,7 +68,9 @@ def _base_frame(df: pd.DataFrame, reading_number_field: str) -> pd.DataFrame:
     out["location_number"] = df.get("location_number")
     out["pod_serial_number"] = df.get("pod_serial_number")
     out["reading_number"] = df.get(reading_number_field)
-    out["reading_datestamp"] = pd.to_datetime(df.get("reading_datestamp"), errors="coerce")
+    out["reading_datestamp"] = pd.to_datetime(
+        df.get("reading_datestamp"), errors="coerce", utc=True
+    )
     return out
 
 
@@ -170,7 +172,7 @@ def resample_daily(df: pd.DataFrame, freq: str = "1D") -> pd.DataFrame:
     """Resample a cleaned location/param frame onto a regular daily grid.
 
     Expects the output of :func:`clean_readings` for a single pod: a frame with a
-    ``reading_datestamp`` column and one column per pollutant. Every column is
+    UTC-aware ``reading_datestamp`` column and one column per pollutant. Every column is
     carried through -- nothing is filtered out, so researchers can decide what to
     work with. Within each ``freq`` bucket, numeric columns are averaged (the
     bucket value is the **mean** of the readings it contains, ignoring missing
