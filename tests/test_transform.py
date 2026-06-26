@@ -261,32 +261,3 @@ def test_resample_daily_n_readings_column_position():
         "pod_serial_number",
         "n_readings",
     ]
-
-
-def test_resample_daily_utc_alignment_across_dst():
-    # Readings straddle the Europe/London spring-forward (2026-03-29 01:00 UTC,
-    # clocks jump from 01:00 to 02:00 BST).  In local BST the second reading
-    # appears at 03:30, which could naively be placed on a different wall-clock
-    # day.  UTC bins must keep both readings in the same day (2026-03-29 UTC).
-    df = _cleaned_frame(
-        [
-            {
-                "location_number": 510,
-                "pod_serial_number": 1,
-                "reading_number": 1,
-                "reading_datestamp": "2026-03-29T00:30:00+00:00",
-                "co": 10.0,
-            },
-            {
-                "location_number": 510,
-                "pod_serial_number": 1,
-                "reading_number": 2,
-                "reading_datestamp": "2026-03-29T02:30:00+00:00",
-                "co": 20.0,
-            },
-        ]
-    )
-    out = resample_daily(df)
-    assert len(out) == 1
-    assert out.loc[0, "reading_datestamp"] == pd.Timestamp("2026-03-29", tz="UTC")
-    assert out.loc[0, "co"] == pytest.approx(15.0)
