@@ -149,6 +149,7 @@ def read_raw_readings(settings: Settings, location_number: int, param: Param) ->
         if sha_path.exists():
             expected = sha_path.read_text(encoding="utf-8").strip()
             if hashlib.sha256(content.encode("utf-8")).hexdigest() != expected:
+                logger.error("Corrupt raw file (checksum mismatch): %s", f)
                 raise CorruptRawFileError(f"Checksum mismatch for raw file: {f}")
         try:
             records.extend(json.loads(content))
