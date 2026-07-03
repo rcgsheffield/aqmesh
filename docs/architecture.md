@@ -50,8 +50,10 @@ raw/
   location=<n>/
     param=gas/
       <pulled_at>_<seq>.json        # exact API payloads, append-only
+      <pulled_at>_<seq>.json.sha256 # integrity sidecar, verified on read
     param=particle/
       <pulled_at>_<seq>.json
+      <pulled_at>_<seq>.json.sha256
 
 clean/
   location=<n>/
@@ -84,6 +86,13 @@ Raw files are never modified or deleted — the clean step always rebuilds from 
   behaviour is non-fatal and documented in [`troubleshooting.md`](troubleshooting.md).
 - **Append-only raw store** — an interrupted ingest run loses nothing; the next run resumes from
   `state/pointers.json` exactly where it left off.
+- **Raw file integrity** — `write_raw_batch` writes each JSON payload via tmp → rename (the same
+  pattern used throughout `storage.py`) plus a SHA-256 `.sha256` sidecar computed over the exact
+  bytes written. `read_raw_readings` verifies the sidecar on every read and raises
+  `CorruptRawFileError` — naming the offending file — on either a checksum mismatch or a JSON parse
+  failure, rather than silently skipping or returning partial data. Because the AQMesh cursor is
+  forward-only, a raw file is unrecoverable once written, so corruption is surfaced loudly rather
+  than tolerated.
 - **Single idempotent deploy script** — `deploy/bootstrap.sh` is the update path as well as the
   install path, so there is no separate upgrade procedure.
 - **Daily resampling** — `transform.resample_daily` averages the cleaned per-reading data onto a
