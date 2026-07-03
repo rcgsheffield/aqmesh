@@ -66,7 +66,7 @@ Then connect as normal:
 ssh aqmesh
 ```
 
-Open http://127.0.0.1:4200 in your local browser while the session is active.
+Open http://localhost:4200/v2/dashboard in your local browser while the session is active.
 
 The tunnel persists for the lifetime of the shell session. To open the UI without an interactive
 shell, use the `-N` flag:

@@ -444,6 +444,32 @@ def test_sync_location_metadata_joins_sensors_to_locations(
 
 
 @respx.mock
+def test_sync_location_metadata_continues_when_sensor_details_fail(settings, assets_payload):
+    """A SensorDetail 404 (issue #116) must not block asset/location metadata from syncing."""
+    _allow_prefect()
+    respx.post(f"{settings.base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"token": "tok"})
+    )
+    respx.get(f"{settings.base_url}/Pods/Assets_V1").mock(
+        return_value=httpx.Response(200, json=assets_payload)
+    )
+    respx.get(f"{settings.base_url}/sensor/SensorDetail//0").mock(return_value=httpx.Response(404))
+
+    records = sync_location_metadata(settings)
+
+    assert len(records) == 2
+    assert {r["location_number"] for r in records} == {510, 915}
+    assert all(r["sensors"] == [] for r in records)
+
+    saved = load_assets(settings)
+    assert len(saved) == 2
+
+    for loc in (510, 915):
+        info_path = settings.clean_dir / f"location={loc}" / "info.json"
+        assert info_path.exists(), f"info.json missing for location {loc}"
+
+
+@respx.mock
 def test_clean_includes_404_location(settings, gas_batch, particle_batch):
     """A location in the asset registry with no raw data must appear in clean results."""
     _allow_prefect()

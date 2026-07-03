@@ -65,6 +65,10 @@ Its roles are:
 Writes are atomic: the file is written to a temporary path then renamed, so an interrupted run
 cannot corrupt the existing state.
 
+Raw batch files (`raw/location=<n>/param=<gas|particle>/<pulled_at>_<seq>.json`) use the same
+tmp → rename pattern, plus a `.sha256` integrity sidecar verified on read — see
+[Raw file integrity in architecture.md](architecture.md#design-decisions) for detail.
+
 ## Automatic gap fill
 
 If the pipeline is down for several hours, or a run fails partway through, the API cursor for

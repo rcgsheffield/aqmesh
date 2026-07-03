@@ -25,7 +25,14 @@ def sync_location_metadata(settings: Settings | None = None) -> list[dict]:
     with AQMeshClient(settings) as client:
         client.authenticate()
         assets = client.get_assets()
-        sensor_details = client.get_sensor_details()
+        try:
+            sensor_details = client.get_sensor_details()
+        except Exception:
+            logger.warning(
+                "Failed to fetch sensor details — continuing with asset/location metadata only.",
+                exc_info=True,
+            )
+            sensor_details = []
 
     # Index sensor details by pod serial number for O(1) lookup.
     sensors_by_pod: dict[int, list[dict]] = defaultdict(list)
