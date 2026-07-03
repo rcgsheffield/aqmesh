@@ -118,7 +118,7 @@ def test_validate_raw_store_detects_invalid(settings, gas_batch):
 
     report = validate_raw_store(settings)
     assert report["invalid"] == 1
-    assert report["errors"][0]["location"] == 510
+    assert report["invalid_files"][0]["location"] == 510
 
 
 def test_validate_raw_store_skips_zero_new_readings(settings, gas_batch):
@@ -160,4 +160,4 @@ def test_validate_raw_store_no_files(settings):
     from aqmesh_pipeline.flows.validate import validate_raw_store
 
     report = validate_raw_store(settings)
-    assert report == {"checked": 0, "valid": 0, "invalid": 0, "errors": []}
+    assert report == {"checked": 0, "valid": 0, "invalid": 0, "invalid_files": []}

@@ -78,7 +78,7 @@ def validate_raw_store(
         pairs = []
         for loc_dir in sorted(settings.raw_dir.glob("location=*")):
             try:
-                location_number = int(loc_dir.name.split("=")[1])
+                location_number = int(loc_dir.name.split("=", 1)[1])
             except (IndexError, ValueError):
                 continue
             for param in Param:
@@ -88,7 +88,7 @@ def validate_raw_store(
 
     if not pairs:
         logger.info("No raw files to validate.")
-        return {"checked": 0, "valid": 0, "invalid": 0, "errors": []}
+        return {"checked": 0, "valid": 0, "invalid": 0, "invalid_files": []}
 
     results = [
         validate_location_param(settings, location_number, param)
@@ -108,4 +108,9 @@ def validate_raw_store(
     else:
         logger.info("Validation: %d file(s) checked, all valid.", checked)
 
-    return {"checked": checked, "valid": len(valid), "invalid": len(invalid), "errors": invalid}
+    return {
+        "checked": checked,
+        "valid": len(valid),
+        "invalid": len(invalid),
+        "invalid_files": invalid,
+    }

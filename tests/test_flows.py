@@ -519,7 +519,7 @@ def test_pipeline_end_to_end(monkeypatch, tmp_path, assets_payload, gas_batch, p
 
     assert result["ingest"]["locations"] == 2
     assert any(r["csv"] for r in result["clean"])
-    assert result["validate"].keys() == {"checked", "valid", "invalid", "errors"}
+    assert result["validate"].keys() == {"checked", "valid", "invalid", "invalid_files"}
     # All registered locations should appear in the asset registry after the pipeline.
     from aqmesh_pipeline.config import Settings as S
 
