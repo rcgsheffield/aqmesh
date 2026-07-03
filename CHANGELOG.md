@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.4.0](https://github.com/rcgsheffield/aqmesh/compare/v0.3.0...v0.4.0) (2026-07-03)
+
+
+### Features
+
+* **validate:** add non-blocking raw JSON schema validation step ([#109](https://github.com/rcgsheffield/aqmesh/issues/109)) ([a2c4a44](https://github.com/rcgsheffield/aqmesh/commit/a2c4a4458b0b94b284016c5e9e316c559ad5f7c9))
+
+
+### Bug Fixes
+
+* **ci:** skip lint/security/test on release-please branches ([#111](https://github.com/rcgsheffield/aqmesh/issues/111)) ([e8ba2c4](https://github.com/rcgsheffield/aqmesh/commit/e8ba2c4a9c480cc9ab357ad5d18a937f59251c68)), closes [#110](https://github.com/rcgsheffield/aqmesh/issues/110)
+* **metadata:** isolate SensorDetail failures from asset/location sync ([#117](https://github.com/rcgsheffield/aqmesh/issues/117)) ([fa83681](https://github.com/rcgsheffield/aqmesh/commit/fa8368148df463a1e090852ae0f5e17e46a86b48))
+
+
+### Documentation
+
+* add accurate URL ([69bcf64](https://github.com/rcgsheffield/aqmesh/commit/69bcf64639385b74f3e2cdf0396fb4c175101fc1))
+* Add handy notes ([#115](https://github.com/rcgsheffield/aqmesh/issues/115)) ([a8494f0](https://github.com/rcgsheffield/aqmesh/commit/a8494f021f6175a27a7b7bb67c250425219d3e31))
+* **storage:** document raw-file SHA-256 integrity strategy ([#118](https://github.com/rcgsheffield/aqmesh/issues/118)) ([45e26c9](https://github.com/rcgsheffield/aqmesh/commit/45e26c9685c259c53edb7dd5bf0728bbff406827))
+
+
+### Miscellaneous
+
+* **deps:** bump https://github.com/astral-sh/ruff-pre-commit ([#113](https://github.com/rcgsheffield/aqmesh/issues/113)) ([fd80f83](https://github.com/rcgsheffield/aqmesh/commit/fd80f83b6e63eb16ae1235b0d2625693ef2e87e7))
+* **deps:** bump https://github.com/astral-sh/uv-pre-commit ([#112](https://github.com/rcgsheffield/aqmesh/issues/112)) ([5baa6f7](https://github.com/rcgsheffield/aqmesh/commit/5baa6f7c8cecf64f0caec9d2084f8cdf31d3e9d3))
+
 ## [0.3.0](https://github.com/rcgsheffield/aqmesh/compare/v0.2.0...v0.3.0) (2026-06-26)
 
 
