@@ -34,7 +34,15 @@ def validate_raw_file(path: Path, schema: dict) -> list[dict]:
     list means every record passed.  Errors are collected rather than raised so
     a single bad record does not abort the rest of the batch.
     """
-    records: list[dict] = json.loads(path.read_bytes())
+    records = json.loads(path.read_bytes())
+    if not isinstance(records, list):
+        return [
+            {
+                "record_index": -1,
+                "message": f"Expected JSON array, got {type(records).__name__}",
+                "path": [],
+            }
+        ]
     errors: list[dict] = []
     for i, record in enumerate(records):
         try:

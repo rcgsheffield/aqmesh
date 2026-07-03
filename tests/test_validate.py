@@ -54,6 +54,24 @@ def test_validate_raw_file_empty_array(tmp_path):
     assert validate_raw_file(f, schema) == []
 
 
+def test_validate_raw_file_null_json(tmp_path):
+    schema = load_schema(Param.GAS)
+    f = tmp_path / "batch.json"
+    f.write_text("null", encoding="utf-8")
+    errors = validate_raw_file(f, schema)
+    assert errors == [
+        {"record_index": -1, "message": "Expected JSON array, got NoneType", "path": []}
+    ]
+
+
+def test_validate_raw_file_object_not_array(tmp_path):
+    schema = load_schema(Param.GAS)
+    f = tmp_path / "batch.json"
+    f.write_text("{}", encoding="utf-8")
+    errors = validate_raw_file(f, schema)
+    assert errors == [{"record_index": -1, "message": "Expected JSON array, got dict", "path": []}]
+
+
 def test_validate_raw_file_particle_valid(tmp_path, particle_batch):
     schema = load_schema(Param.PARTICLE)
     f = tmp_path / "batch.json"
