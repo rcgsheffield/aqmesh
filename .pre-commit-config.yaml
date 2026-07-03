@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.11.22 # latest at time of writing; bump as needed
+    rev: 0.11.24 # latest at time of writing; bump as needed
     hooks:
       - id: uv-lock
 
@@ -15,7 +15,7 @@ repos:
       - id: check-added-large-files
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.18
+    rev: v0.15.20
     hooks:
       - id: ruff
         args: [--fix]
