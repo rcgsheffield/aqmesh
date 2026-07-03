@@ -30,9 +30,10 @@ def pipeline(resample: bool = True) -> dict:
         logger.warning("Metadata sync failed — continuing with ingest.")
     ingest_summary = ingest_raw()
     try:
-        validate_raw_store(summaries=ingest_summary.get("summaries"))
+        validate_report = validate_raw_store(summaries=ingest_summary.get("summaries"))
     except Exception:
         logger.warning("Raw store validation failed unexpectedly — continuing.")
+        validate_report = None
     clean_results = clean_data(resample=resample)
     logger.info("Pipeline finished.")
-    return {"ingest": ingest_summary, "clean": clean_results}
+    return {"ingest": ingest_summary, "clean": clean_results, "validate": validate_report}

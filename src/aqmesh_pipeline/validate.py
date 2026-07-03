@@ -9,6 +9,7 @@ iterating over the entire raw store.
 
 from __future__ import annotations
 
+import functools
 import json
 import logging
 from importlib.resources import files
@@ -21,6 +22,7 @@ from .models import Param
 logger = logging.getLogger(__name__)
 
 
+@functools.cache
 def load_schema(param: Param) -> dict:
     """Return the bundled JSON Schema dict for *param*."""
     schema_ref = files("aqmesh_pipeline.schemas") / f"raw_{param.label}_reading.json"
@@ -44,9 +46,10 @@ def validate_raw_file(path: Path, schema: dict) -> list[dict]:
             }
         ]
     errors: list[dict] = []
+    validator = jsonschema.Draft7Validator(schema)
     for i, record in enumerate(records):
         try:
-            jsonschema.validate(record, schema)
+            validator.validate(record)
         except jsonschema.ValidationError as exc:
             errors.append(
                 {
