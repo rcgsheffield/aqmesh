@@ -519,6 +519,7 @@ def test_pipeline_end_to_end(monkeypatch, tmp_path, assets_payload, gas_batch, p
 
     assert result["ingest"]["locations"] == 2
     assert any(r["csv"] for r in result["clean"])
+    assert result["validate"].keys() == {"checked", "valid", "invalid", "invalid_files"}
     # All registered locations should appear in the asset registry after the pipeline.
     from aqmesh_pipeline.config import Settings as S
 
@@ -586,3 +587,28 @@ def test_pipeline_continues_when_metadata_sync_fails(
     result = pipeline()
 
     assert result["ingest"]["locations"] > 0
+
+
+@respx.mock
+def test_pipeline_continues_when_validation_fails(
+    monkeypatch, tmp_path, assets_payload, gas_batch, particle_batch
+):
+    """clean_data() must still run, and result['validate'] must be None, when validation raises."""
+    monkeypatch.setenv("AQMESH_USERNAME", "test-user")
+    monkeypatch.setenv("AQMESH_PASSWORD", "test-pass")
+    monkeypatch.setenv("AQMESH_ENVIRONMENT", "test")
+    monkeypatch.setenv("AQMESH_DATA_ROOT", str(tmp_path))
+
+    monkeypatch.setattr(
+        "aqmesh_pipeline.flows.pipeline.validate_raw_store",
+        Mock(side_effect=RuntimeError("validation blew up")),
+    )
+
+    base_url = "https://apitest.aqmeshdata.net/api"
+    _mock_api(base_url, assets_payload, gas_batch, particle_batch)
+    respx.get(f"{base_url}/sensor/SensorDetail//0").mock(return_value=httpx.Response(200, json=[]))
+
+    result = pipeline()
+
+    assert result["validate"] is None
+    assert any(r["csv"] for r in result["clean"])
