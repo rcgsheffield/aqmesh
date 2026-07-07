@@ -85,7 +85,7 @@ def test_sensors_active_flag(settings, sensor_detail_payload, failed_sensor_payl
         return_value=httpx.Response(200, json=failed_sensor_payload)
     )
     _sensors_cmd(["--active"], settings)
-    assert route.calls.last.request.url.path.endswith("/sensor/SensorDetail//1")
+    assert route.calls.last.request.url.path.endswith("/sensor/SensorDetail/1")
 
 
 @respx.mock

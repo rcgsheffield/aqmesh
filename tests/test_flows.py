@@ -65,7 +65,7 @@ def _mock_metadata(base_url, assets_payload, sensor_detail_payload=None):
     respx.get(f"{base_url}/Pods/Assets_V1").mock(
         return_value=httpx.Response(200, json=assets_payload)
     )
-    respx.get(f"{base_url}/sensor/SensorDetail//0").mock(
+    respx.get(f"{base_url}/sensor/SensorDetail/0").mock(
         return_value=httpx.Response(200, json=sensor_detail_payload or [])
     )
 
@@ -453,7 +453,7 @@ def test_sync_location_metadata_continues_when_sensor_details_fail(settings, ass
     respx.get(f"{settings.base_url}/Pods/Assets_V1").mock(
         return_value=httpx.Response(200, json=assets_payload)
     )
-    respx.get(f"{settings.base_url}/sensor/SensorDetail//0").mock(return_value=httpx.Response(404))
+    respx.get(f"{settings.base_url}/sensor/SensorDetail/0").mock(return_value=httpx.Response(404))
 
     records = sync_location_metadata(settings)
 
@@ -513,7 +513,7 @@ def test_pipeline_end_to_end(monkeypatch, tmp_path, assets_payload, gas_batch, p
 
     base_url = "https://apitest.aqmeshdata.net/api"
     _mock_api(base_url, assets_payload, gas_batch, particle_batch)
-    respx.get(f"{base_url}/sensor/SensorDetail//0").mock(return_value=httpx.Response(200, json=[]))
+    respx.get(f"{base_url}/sensor/SensorDetail/0").mock(return_value=httpx.Response(200, json=[]))
 
     result = pipeline()
 
@@ -606,7 +606,7 @@ def test_pipeline_continues_when_validation_fails(
 
     base_url = "https://apitest.aqmeshdata.net/api"
     _mock_api(base_url, assets_payload, gas_batch, particle_batch)
-    respx.get(f"{base_url}/sensor/SensorDetail//0").mock(return_value=httpx.Response(200, json=[]))
+    respx.get(f"{base_url}/sensor/SensorDetail/0").mock(return_value=httpx.Response(200, json=[]))
 
     result = pipeline()
 

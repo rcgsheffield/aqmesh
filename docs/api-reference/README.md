@@ -35,7 +35,7 @@ that exposes these to operators is [`cli.py`](../../src/aqmesh_pipeline/cli.py).
 | Server ping (4.16) | `GET /serverping` | `aqmesh ping`, `check` — `server_ping` |
 | System notifications (4.17) | `GET /notification/system` | `check` — `get_system_notifications` |
 | Failed sensors (4.8) | `GET /Pods/SensorFail` | `aqmesh sensors` — `get_failed_sensors` |
-| Sensor details (4.20) | `GET /sensor/SensorDetail//{active}` | `aqmesh sensors` — `get_sensor_details` |
+| Sensor details (4.20) | `GET /sensor/SensorDetail/{active}` (manual says `//`, wrong in prod — see [diagnostics.md](diagnostics.md#sensor-details-420)) | `aqmesh sensors` — `get_sensor_details` |
 
 Everything else in the manual is either reference material (example payloads in
 4.13–4.15) or device-mutating operations we intentionally leave to the AQMesh web
