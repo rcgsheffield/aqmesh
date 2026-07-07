@@ -16,6 +16,7 @@ from prefect.cache_policies import NO_CACHE
 
 from ..client import AQMeshClient
 from ..config import Settings, get_settings
+from ..diagnostics import record_api_error
 from ..metadata import build_raw_store_descriptor
 from ..models import READING_DATESTAMP_FIELD, Param
 from ..storage import (
@@ -55,11 +56,24 @@ def ingest_location_param(
                 if ds and (last_datestamp is None or ds > last_datestamp):
                     last_datestamp = ds
     except httpx.HTTPError as exc:
+        # Capture the response body (issue #134) so a persistent upstream failure
+        # can be diagnosed without reproducing the call against the live API.
+        diag = record_api_error(
+            settings,
+            context={
+                "stage": "ingest",
+                "location_number": location_number,
+                "param": param.label,
+            },
+            exc=exc,
+        )
         if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 404:
             logger.warning(
-                "Location %s %s: not found (HTTP 404) — pod may not be deployed yet.",
+                "Location %s %s: not found (HTTP 404) — pod may not be deployed yet. "
+                "Response body: %s",
                 location_number,
                 param.label,
+                diag["response_body"],
             )
             return {
                 "location_number": location_number,
@@ -74,10 +88,12 @@ def ingest_location_param(
         # here: log it and return a "failed" summary rather than letting it abort the
         # whole run, so the other params and locations still flow.
         logger.error(
-            "Location %s %s: fetch failed after retries (%s) -- skipping this param.",
+            "Location %s %s: fetch failed after retries (%s) -- skipping this param. "
+            "Response body: %s",
             location_number,
             param.label,
             exc,
+            diag["response_body"],
         )
         return {
             "location_number": location_number,

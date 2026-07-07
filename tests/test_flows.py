@@ -15,6 +15,7 @@ import pytest
 import respx
 import yaml
 
+from aqmesh_pipeline.diagnostics import diagnostics_path
 from aqmesh_pipeline.flows.clean import clean_data, clean_location_param
 from aqmesh_pipeline.flows.ingest import ingest_raw
 from aqmesh_pipeline.flows.metadata import sync_location_metadata
@@ -121,7 +122,7 @@ def test_ingest_raw_continues_when_gas_fails(
         loc = asset["location_number"]
         gas_url = f"{settings.base_url}/LocationData/Next/{loc}/{int(Param.GAS)}/01/1"
         particle_url = f"{settings.base_url}/LocationData/Next/{loc}/{int(Param.PARTICLE)}/01/1"
-        respx.get(gas_url).mock(return_value=httpx.Response(500))
+        respx.get(gas_url).mock(return_value=httpx.Response(500, text="upstream boom"))
         respx.get(particle_url).mock(
             side_effect=[httpx.Response(200, json=particle_batch), httpx.Response(204)]
         )
@@ -142,6 +143,15 @@ def test_ingest_raw_continues_when_gas_fails(
 
     gas_summaries = [s for s in summary["summaries"] if s["param"] == "gas"]
     assert gas_summaries and all(s["status"] == "failed" for s in gas_summaries)
+
+    # The 500 response body is persisted for later debugging (issue #134).
+    diag_path = diagnostics_path(settings)
+    assert diag_path.exists()
+    records = [json.loads(line) for line in diag_path.read_text().splitlines()]
+    gas_errors = [r for r in records if r["stage"] == "ingest" and r["param"] == "gas"]
+    assert gas_errors
+    assert all(r["status_code"] == 500 for r in gas_errors)
+    assert all(r["response_body"] == "upstream boom" for r in gas_errors)
 
 
 @respx.mock
@@ -165,7 +175,7 @@ def test_ingest_raw_skips_404_locations(
             ]
         )
         respx.get(f"{settings.base_url}/LocationData/Next/915/{int(param)}/01/1").mock(
-            return_value=httpx.Response(404)
+            return_value=httpx.Response(404, text="pod not deployed")
         )
 
     summary = ingest_raw(settings)
@@ -181,6 +191,13 @@ def test_ingest_raw_skips_404_locations(
     assert "915" not in pointers
     # The healthy location still recorded its progress.
     assert pointers["510"]["gas"]["new_readings"] == len(gas_batch)
+
+    # The 404 response body is persisted for later debugging (issue #134).
+    records = [json.loads(line) for line in diagnostics_path(settings).read_text().splitlines()]
+    not_found_errors = [r for r in records if r["location_number"] == 915]
+    assert len(not_found_errors) == 2  # gas + particle
+    assert all(r["status_code"] == 404 for r in not_found_errors)
+    assert all(r["response_body"] == "pod not deployed" for r in not_found_errors)
 
 
 @respx.mock
@@ -453,7 +470,9 @@ def test_sync_location_metadata_continues_when_sensor_details_fail(settings, ass
     respx.get(f"{settings.base_url}/Pods/Assets_V1").mock(
         return_value=httpx.Response(200, json=assets_payload)
     )
-    respx.get(f"{settings.base_url}/sensor/SensorDetail/0").mock(return_value=httpx.Response(404))
+    respx.get(f"{settings.base_url}/sensor/SensorDetail/0").mock(
+        return_value=httpx.Response(404, text="sensor route not found")
+    )
 
     records = sync_location_metadata(settings)
 
@@ -467,6 +486,16 @@ def test_sync_location_metadata_continues_when_sensor_details_fail(settings, ass
     for loc in (510, 915):
         info_path = settings.clean_dir / f"location={loc}" / "info.json"
         assert info_path.exists(), f"info.json missing for location {loc}"
+
+    # The SensorDetail failure body is persisted for later debugging (issue #134).
+    diag_records = [
+        json.loads(line) for line in diagnostics_path(settings).read_text().splitlines()
+    ]
+    metadata_errors = [r for r in diag_records if r["stage"] == "metadata"]
+    assert len(metadata_errors) == 1
+    assert metadata_errors[0]["call"] == "get_sensor_details"
+    assert metadata_errors[0]["status_code"] == 404
+    assert metadata_errors[0]["response_body"] == "sensor route not found"
 
 
 @respx.mock

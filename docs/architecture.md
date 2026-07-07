@@ -27,6 +27,7 @@ CLI: aqmesh pipeline | ingest | clean | check
 | `client.py` | AQMesh API client: bearer-token auth with auto-refresh, pod listing via `/Pods/Assets_V1`, cursor-style data iteration via `/LocationData/Next/…` |
 | `models.py` | Data models and type definitions: `Param` enum (gas/particle), `Asset` (pod metadata), sentinel constants |
 | `storage.py` | Raw store I/O — reading and writing JSON batches, CSVs, metadata sidecars, and the `state/pointers.json` cursor + `state/assets.json` snapshot |
+| `diagnostics.py` | Captures API-error response bodies on failure and appends them to `state/diagnostics.jsonl` for later debugging (issue #134) |
 | `metadata.py` | Builds the per-CSV metadata sidecar (column units/descriptions, provenance, `reading_status` legend) |
 | `transform.py` | Data cleaning: deduplication by reading number, sentinel → NaN conversion, calibration (`prescaled × slope + offset`) |
 | `flows/ingest.py` | Prefect flow: authenticates, lists pods, downloads per-location/param data, writes to raw store |
@@ -70,6 +71,7 @@ resampled/
 state/
   pointers.json                     # cursor per location/param pair — safe to restart mid-run
   assets.json                       # asset snapshot from ingest; read by the offline clean stage
+  diagnostics.jsonl                 # append-only log of API failures + response bodies (issue #134)
 ```
 
 Each clean CSV is paired with a `.metadata.json` sidecar (issue #58) documenting each column

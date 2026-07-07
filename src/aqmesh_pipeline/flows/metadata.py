@@ -13,6 +13,7 @@ from prefect import flow, get_run_logger
 
 from ..client import AQMeshClient
 from ..config import Settings, get_settings
+from ..diagnostics import record_api_error
 from ..storage import save_assets, write_location_info
 
 
@@ -27,9 +28,18 @@ def sync_location_metadata(settings: Settings | None = None) -> list[dict]:
         assets = client.get_assets()
         try:
             sensor_details = client.get_sensor_details()
-        except Exception:
+        except Exception as exc:
+            # Persist the response body when this is an httpx error (issue #134);
+            # non-httpx failures are still recorded (with no body/status).
+            diag = record_api_error(
+                settings,
+                context={"stage": "metadata", "call": "get_sensor_details"},
+                exc=exc,
+            )
             logger.warning(
-                "Failed to fetch sensor details — continuing with asset/location metadata only.",
+                "Failed to fetch sensor details — continuing with asset/location metadata "
+                "only. Response body: %s",
+                diag["response_body"],
                 exc_info=True,
             )
             sensor_details = []
