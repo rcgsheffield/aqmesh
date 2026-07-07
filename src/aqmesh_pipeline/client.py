@@ -178,8 +178,10 @@ class AQMeshClient:
             active: Restrict to active/installed pods (the manual's ``Active=1``
                 filter). When False (default), include all deployed pods.
         """
-        # The manual documents a literal double slash before the Active flag.
-        resp = self._get(f"/sensor/SensorDetail//{1 if active else 0}")
+        # The manual documents a literal double slash before the Active flag, but that
+        # 404s in production; a single slash returns 401 (ownership-scoped, not a
+        # missing route) instead — see issue #121 and docs/api-reference/diagnostics.md.
+        resp = self._get(f"/sensor/SensorDetail/{1 if active else 0}")
         if resp.status_code == httpx.codes.NO_CONTENT or not resp.content:
             return []
         return [SensorDetail.model_validate(item) for item in resp.json()]

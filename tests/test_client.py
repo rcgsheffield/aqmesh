@@ -318,8 +318,7 @@ def test_get_sensor_details_default_all(settings, sensor_detail_payload):
 
     assert [d.sensor_type_name for d in details] == ["NO2", "O3"]
     assert details[1].replacement_needed  # O3 is flagged
-    # Default (all pods) ends in the literal double-slash + 0 from the manual.
-    assert route.calls.last.request.url.path.endswith("/sensor/SensorDetail//0")
+    assert route.calls.last.request.url.path.endswith("/sensor/SensorDetail/0")
 
 
 @respx.mock
@@ -333,7 +332,7 @@ def test_get_sensor_details_active_flag(settings, sensor_detail_payload):
     with AQMeshClient(settings) as client:
         client.get_sensor_details(active=True)
 
-    assert route.calls.last.request.url.path.endswith("/sensor/SensorDetail//1")
+    assert route.calls.last.request.url.path.endswith("/sensor/SensorDetail/1")
 
 
 @respx.mock

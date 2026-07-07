@@ -62,10 +62,18 @@ by [`aqmesh sensors`](../../src/aqmesh_pipeline/cli.py).
 ## Sensor details (4.20)
 
 ```
-GET /sensor/SensorDetail//{Active}      # note the literal double slash
+GET /sensor/SensorDetail/{Active}
 ```
 
 `Active`: `0` = all deployed pods, `1` = active/installed only.
+
+> The manual (§4.20) documents a literal double slash before `{Active}`
+> (`SensorDetail//{Active}`). In production that 404s — a single slash gets past
+> routing and returns `401` instead (ownership-scoped, per the [data ownership
+> checks](authentication.md#data-ownership-checks-42) below), so the manual's
+> format appears to be wrong. See issue #121: this account still can't retrieve
+> sensor details (401), which needs following up with AQMesh support as a
+> permissions/entitlement question rather than a URL question.
 
 Returns per-sensor status and lifetime. The fields the `SensorDetail` model
 pins — `serial_number` (pod), `sensor_serial_number`, `sensor_type_name`,
