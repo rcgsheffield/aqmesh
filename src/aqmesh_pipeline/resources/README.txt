@@ -1,9 +1,9 @@
 AQMesh Air Quality Data
 =======================
 
-This directory contains air quality readings collected from AQMesh outdoor sensor pods
-deployed across Sheffield. The pipeline runs automatically every hour (at :06 past the
-hour, Europe/London time) and keeps all files up to date.
+This directory contains air quality readings collected from AQMesh outdoor sensor pods.
+The pipeline runs automatically every hour (at :06 past the hour, Europe/London time)
+and keeps all files up to date.
 
 
 Directory layout
