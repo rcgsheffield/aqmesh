@@ -26,9 +26,33 @@ logger = logging.getLogger(__name__)
 TOKEN_LIFETIME_SECONDS = 120 * 60
 TOKEN_REFRESH_BUFFER_SECONDS = 5 * 60
 
+# Truncation cap for a logged error body — long enough to capture a useful
+# vendor diagnostic, short enough not to flood the logs with a huge payload.
+MAX_BODY_CHARS = 2000
+
 
 class AQMeshAuthError(RuntimeError):
     """Authentication with the AQMesh API failed."""
+
+
+def http_error_body(exc: BaseException, *, limit: int = MAX_BODY_CHARS) -> str | None:
+    """Return the response body for an httpx error, truncated to ``limit`` chars.
+
+    ``str(exc)`` for an ``httpx.HTTPStatusError`` gives the status and URL but not
+    the response body — the vendor error message or 500 detail that explains the
+    failure. This pulls that body out so callers can log it alongside the status.
+
+    Returns ``None`` when there is no readable response — e.g. an
+    ``httpx.TransportError`` (timeout/connection failure) carries no ``.response``,
+    or ``.text`` is itself undecodable. Never raises.
+    """
+    resp = getattr(exc, "response", None)
+    if resp is None:
+        return None
+    try:
+        return resp.text[:limit]
+    except Exception:
+        return None
 
 
 class AQMeshClient:

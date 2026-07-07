@@ -33,6 +33,7 @@ from .flows.ingest import ingest_raw
 from .flows.metadata import sync_location_metadata
 from .flows.pipeline import pipeline
 from .flows.validate import validate_raw_store
+from .logging_setup import configure_persisted_logging
 from .models import Param
 from .storage import write_raw_batch
 
@@ -371,6 +372,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         logging.basicConfig(
             level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
         )
+        configure_persisted_logging(_resolve_settings_optional(None))
         _ARGV_COMMANDS[argv_list[0]](argv_list[1:])
         return
 
@@ -391,6 +393,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
     )
+    configure_persisted_logging(_resolve_settings_optional(None))
     if args.command in ("clean", "pipeline"):
         _COMMANDS[args.command](resample=not args.no_resample)
     elif args.command == "validate":

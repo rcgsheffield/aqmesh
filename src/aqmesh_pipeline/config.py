@@ -68,6 +68,10 @@ class Settings(BaseSettings):
     def state_dir(self) -> Path:
         return self.data_root / "state"
 
+    @property
+    def log_dir(self) -> Path:
+        return self.data_root / "logs"
+
 
 def get_settings() -> Settings:
     """Load settings from the environment.

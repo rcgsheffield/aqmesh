@@ -5,6 +5,7 @@ from __future__ import annotations
 from prefect import flow, get_run_logger
 
 from ..config import get_settings
+from ..logging_setup import configure_persisted_logging
 from ..storage import write_data_docs
 from .clean import clean_data
 from .ingest import ingest_raw
@@ -20,6 +21,9 @@ def pipeline(resample: bool = True) -> dict:
     CSVs under ``resampled/``.
     """
     logger = get_run_logger()
+    # Persist WARNING+ logs to the shared volume (issue #134). Idempotent, so the
+    # long-lived worker re-running this flow hourly never stacks handlers.
+    configure_persisted_logging(get_settings())
     try:
         write_data_docs(get_settings())
     except Exception:

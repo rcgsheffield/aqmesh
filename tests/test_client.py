@@ -6,8 +6,28 @@ import httpx
 import pytest
 import respx
 
-from aqmesh_pipeline.client import AQMeshAuthError, AQMeshClient
+from aqmesh_pipeline.client import AQMeshAuthError, AQMeshClient, http_error_body
 from aqmesh_pipeline.models import Param
+
+
+def _status_error(status_code: int, body: str) -> httpx.HTTPStatusError:
+    """Build an HTTPStatusError carrying a response body, as client._get() does."""
+    request = httpx.Request("GET", "https://example.test/LocationData/Next/510/1/01/1")
+    response = httpx.Response(status_code, text=body, request=request)
+    return httpx.HTTPStatusError(f"server error {status_code}", request=request, response=response)
+
+
+def test_http_error_body_returns_response_body():
+    assert http_error_body(_status_error(500, "vendor boom")) == "vendor boom"
+
+
+def test_http_error_body_truncates_to_limit():
+    assert http_error_body(_status_error(500, "x" * 5000), limit=100) == "x" * 100
+
+
+def test_http_error_body_none_without_response():
+    """A transport error (timeout/connection) carries no response — body is None."""
+    assert http_error_body(httpx.ConnectTimeout("timed out")) is None
 
 
 @respx.mock

@@ -14,9 +14,8 @@ import httpx
 from prefect import flow, get_run_logger, task
 from prefect.cache_policies import NO_CACHE
 
-from ..client import AQMeshClient
+from ..client import AQMeshClient, http_error_body
 from ..config import Settings, get_settings
-from ..diagnostics import record_api_error
 from ..metadata import build_raw_store_descriptor
 from ..models import READING_DATESTAMP_FIELD, Param
 from ..storage import (
@@ -56,24 +55,16 @@ def ingest_location_param(
                 if ds and (last_datestamp is None or ds > last_datestamp):
                     last_datestamp = ds
     except httpx.HTTPError as exc:
-        # Capture the response body (issue #134) so a persistent upstream failure
-        # can be diagnosed without reproducing the call against the live API.
-        diag = record_api_error(
-            settings,
-            context={
-                "stage": "ingest",
-                "location_number": location_number,
-                "param": param.label,
-            },
-            exc=exc,
-        )
+        # Log the response body (issue #134) so a persistent upstream failure can be
+        # diagnosed from the Prefect logs without reproducing the call against the API.
+        body = http_error_body(exc)
         if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 404:
             logger.warning(
                 "Location %s %s: not found (HTTP 404) — pod may not be deployed yet. "
                 "Response body: %s",
                 location_number,
                 param.label,
-                diag["response_body"],
+                body,
             )
             return {
                 "location_number": location_number,
@@ -93,7 +84,7 @@ def ingest_location_param(
             location_number,
             param.label,
             exc,
-            diag["response_body"],
+            body,
         )
         return {
             "location_number": location_number,
