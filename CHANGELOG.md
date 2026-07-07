@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.4.1](https://github.com/rcgsheffield/aqmesh/compare/v0.4.0...v0.4.1) (2026-07-07)
+
+
+### Bug Fixes
+
+* **client:** correct SensorDetail path from double to single slash ([#130](https://github.com/rcgsheffield/aqmesh/issues/130)) ([cca3419](https://github.com/rcgsheffield/aqmesh/commit/cca341905b209e9f667950a44db429f9944565e3))
+
+
+### Documentation
+
+* **citation:** add Vouriot and Hathway as authors ([1fa2396](https://github.com/rcgsheffield/aqmesh/commit/1fa2396fa217941506d61d5bc8bd75ce75cb9232))
+
+
+### Miscellaneous
+
+* **deps:** bump https://github.com/astral-sh/uv-pre-commit ([#120](https://github.com/rcgsheffield/aqmesh/issues/120)) ([ca2565d](https://github.com/rcgsheffield/aqmesh/commit/ca2565dc50b3753c74c7ec550258ebca1f6dc4ee))
+* sync uv.lock with aqmesh-pipeline v0.4.0 ([0e4683e](https://github.com/rcgsheffield/aqmesh/commit/0e4683e2fa39903b840fce820dc79cb96f93d920))
+
 ## [0.4.0](https://github.com/rcgsheffield/aqmesh/compare/v0.3.0...v0.4.0) (2026-07-03)
 
 
