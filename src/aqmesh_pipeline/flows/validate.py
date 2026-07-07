@@ -9,8 +9,9 @@ from __future__ import annotations
 
 from prefect import flow, get_run_logger, task
 
+from aqmesh_client.models import Param
+
 from ..config import Settings, get_settings
-from ..models import Param
 from ..storage import raw_param_dir
 from ..validate import load_schema, validate_raw_file
 

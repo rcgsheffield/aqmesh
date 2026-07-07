@@ -25,8 +25,9 @@ from pathlib import Path
 import pandas as pd
 from ruamel.yaml import YAML
 
+from aqmesh_client.models import Asset, Param
+
 from .config import Settings
-from .models import Asset, Param
 
 logger = logging.getLogger(__name__)
 

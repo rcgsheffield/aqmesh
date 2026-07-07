@@ -12,10 +12,11 @@ from datetime import UTC, datetime
 
 from prefect import flow, get_run_logger, task
 
+from aqmesh_client.models import Asset, Param
+
 from ..config import Settings, get_settings
 from ..csvw import build_csvw
 from ..metadata import build_metadata
-from ..models import Asset, Param
 from ..storage import (
     assets_path,
     clean_csv_path,

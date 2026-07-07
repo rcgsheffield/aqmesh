@@ -11,7 +11,8 @@ from collections import defaultdict
 
 from prefect import flow, get_run_logger
 
-from ..client import AQMeshClient
+from aqmesh_client.client import AQMeshClient
+
 from ..config import Settings, get_settings
 from ..storage import save_assets, write_location_info
 

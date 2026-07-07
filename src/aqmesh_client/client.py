@@ -17,7 +17,7 @@ from collections.abc import Iterator
 
 import httpx
 
-from .config import Settings
+from .config import APISettings
 from .models import Asset, FailedSensor, Param, SensorDetail, ServerPing
 
 logger = logging.getLogger(__name__)
@@ -34,11 +34,12 @@ class AQMeshAuthError(RuntimeError):
 class AQMeshClient:
     """A thin, retrying wrapper around the AQMesh REST API."""
 
-    def __init__(self, settings: Settings, client: httpx.Client | None = None) -> None:
+    def __init__(self, settings: APISettings, client: httpx.Client | None = None) -> None:
         """Initialise the client with credentials and connection settings.
 
         Args:
-            settings: Pipeline configuration including API credentials and base URL.
+            settings: API configuration including credentials and base URL. Any
+                :class:`APISettings` (or subclass, e.g. the pipeline's ``Settings``) works.
             client: Optional pre-built httpx client (injected in tests).
         """
         self._settings = settings

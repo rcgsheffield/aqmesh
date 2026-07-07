@@ -14,10 +14,11 @@ import httpx
 from prefect import flow, get_run_logger, task
 from prefect.cache_policies import NO_CACHE
 
-from ..client import AQMeshClient
+from aqmesh_client.client import AQMeshClient
+from aqmesh_client.models import READING_DATESTAMP_FIELD, Param
+
 from ..config import Settings, get_settings
 from ..metadata import build_raw_store_descriptor
-from ..models import READING_DATESTAMP_FIELD, Param
 from ..storage import (
     load_pointers,
     raw_store_descriptor_path,
