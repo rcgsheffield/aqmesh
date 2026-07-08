@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.1](https://github.com/rcgsheffield/aqmesh/compare/v0.5.0...v0.5.1) (2026-07-08)
+
+
+### Bug Fixes
+
+* **ci:** allow manual PyPI publish and unblock release-triggered runs ([#152](https://github.com/rcgsheffield/aqmesh/issues/152)) ([47ad1ff](https://github.com/rcgsheffield/aqmesh/commit/47ad1ffc158a104884cbd7a772752783fc5b5f1e))
+* publish client package to PyPI as `aqmesh`, not `aqmesh-client` ([#154](https://github.com/rcgsheffield/aqmesh/issues/154)) ([4552adc](https://github.com/rcgsheffield/aqmesh/commit/4552adc08ccfc4a2b396f3f4d98daf9ac9c406f9))
+
 ## [0.5.0](https://github.com/rcgsheffield/aqmesh/compare/v0.4.3...v0.5.0) (2026-07-08)
 
 
