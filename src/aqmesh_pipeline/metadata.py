@@ -17,8 +17,9 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
+from aqmesh_client.models import GAS_SPECIES, PARTICLE_CHANNELS, Asset, Param
+
 from . import __version__
-from .models import GAS_SPECIES, PARTICLE_CHANNELS, Asset, Param
 from .storage import raw_param_dir
 
 if TYPE_CHECKING:

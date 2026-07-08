@@ -6,13 +6,13 @@ from datetime import UTC, datetime
 
 import pandas as pd
 
+from aqmesh_client.models import Asset, Param
 from aqmesh_pipeline.metadata import (
     READING_STATUS_LEGEND,
     build_metadata,
     build_raw_store_descriptor,
     extract_species_units,
 )
-from aqmesh_pipeline.models import Asset, Param
 from aqmesh_pipeline.storage import write_raw_batch
 from aqmesh_pipeline.transform import clean_readings
 

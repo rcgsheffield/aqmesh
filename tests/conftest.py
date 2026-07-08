@@ -164,7 +164,7 @@ def seed_raw(settings, gas_batch, particle_batch, assets_payload):
 
     Also persists an asset snapshot so the clean stage can attach location provenance.
     """
-    from aqmesh_pipeline.models import Asset, Param
+    from aqmesh_client.models import Asset, Param
     from aqmesh_pipeline.storage import save_assets, write_raw_batch
 
     write_raw_batch(settings, 510, Param.GAS, gas_batch, pulled_at="20260101T000000Z", seq=0)

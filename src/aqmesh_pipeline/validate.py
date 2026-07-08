@@ -17,7 +17,7 @@ from pathlib import Path
 
 import jsonschema
 
-from .models import Param
+from aqmesh_client.models import Param
 
 logger = logging.getLogger(__name__)
 

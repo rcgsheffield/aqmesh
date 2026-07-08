@@ -7,7 +7,7 @@ import math
 import pandas as pd
 import pytest
 
-from aqmesh_pipeline.models import Param
+from aqmesh_client.models import Param
 from aqmesh_pipeline.transform import clean_readings, resample_daily
 
 

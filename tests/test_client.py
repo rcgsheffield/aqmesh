@@ -6,8 +6,8 @@ import httpx
 import pytest
 import respx
 
-from aqmesh_pipeline.client import AQMeshAuthError, AQMeshClient
-from aqmesh_pipeline.models import Param
+from aqmesh_client.client import AQMeshAuthError, AQMeshClient
+from aqmesh_client.models import Param
 
 
 @respx.mock
@@ -130,7 +130,7 @@ def test_authenticate_without_token_raises(settings):
 @pytest.fixture
 def _no_backoff_sleep(monkeypatch):
     """Skip the real backoff sleeps so retry tests stay fast."""
-    monkeypatch.setattr("aqmesh_pipeline.client.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("aqmesh_client.client.time.sleep", lambda _seconds: None)
 
 
 @respx.mock

@@ -8,9 +8,9 @@ import httpx
 import pytest
 import respx
 
+from aqmesh_client.models import Param
 from aqmesh_pipeline import cli
 from aqmesh_pipeline.cli import _repeat_last_cmd
-from aqmesh_pipeline.models import Param
 from aqmesh_pipeline.storage import load_pointers, raw_param_dir, save_pointers
 
 # ---------------------------------------------------------------------------

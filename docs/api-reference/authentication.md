@@ -1,7 +1,7 @@
 # Authentication & data ownership
 
 Manual §§ 4.1, 4.2. Implemented in
-[`AQMeshClient.authenticate`](../../src/aqmesh_pipeline/client.py).
+[`AQMeshClient.authenticate`](../../src/aqmesh_client/client.py).
 
 ## Authenticate (4.1)
 

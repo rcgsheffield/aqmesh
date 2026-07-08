@@ -23,7 +23,7 @@ Selected by `AQMESH_ENVIRONMENT` (see [`config.py`](../../src/aqmesh_pipeline/co
 
 ## What the pipeline uses
 
-The HTTP client lives in [`client.py`](../../src/aqmesh_pipeline/client.py); the CLI
+The HTTP client lives in [`client.py`](../../src/aqmesh_client/client.py); the CLI
 that exposes these to operators is [`cli.py`](../../src/aqmesh_pipeline/cli.py).
 
 | Endpoint | Method + path | Used by |

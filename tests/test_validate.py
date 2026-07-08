@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from aqmesh_pipeline.models import Param
+from aqmesh_client.models import Param
 from aqmesh_pipeline.storage import write_raw_batch
 from aqmesh_pipeline.validate import load_schema, validate_raw_file
 

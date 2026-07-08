@@ -10,7 +10,7 @@ server on a 6-hourly schedule.
 ## Data flow
 
 ```
-AQMesh API ──► client.py ──► flows/ingest.py ──► raw/   (append-only JSON)
+AQMesh API ──► aqmesh_client ──► flows/ingest.py ──► raw/   (append-only JSON)
                                                       │
                                                       ▼
                                          flows/clean.py ──► clean/ (calibrated CSVs)
@@ -19,13 +19,29 @@ Scheduled hourly at :06 (Europe/London) by Prefect 3
 CLI: aqmesh pipeline | ingest | clean | check
 ```
 
-## Source modules (`src/aqmesh_pipeline/`)
+## Packages
+
+The repo ships two importable packages from a single distribution (`src/` layout):
+
+- **`aqmesh_client`** — a self-contained, dependency-light wrapper around the AQMesh REST API
+  (`httpx` + `pydantic`/`pydantic-settings` only; no Prefect, pandas, or pipeline code). Reusable
+  from scripts or notebooks that just need to talk to the API.
+- **`aqmesh_pipeline`** — the Prefect orchestration, storage, cleaning, and CLI that consume the
+  client. The dependency arrow points one way: the pipeline imports the client, never the reverse.
+
+### Client package (`src/aqmesh_client/`)
 
 | Module | Responsibility |
 | --- | --- |
-| `config.py` | Pydantic settings loaded from environment (`.env`); defines `AQMESH_USERNAME`, `AQMESH_PASSWORD`, `AQMESH_ENVIRONMENT`, `AQMESH_DATA_ROOT` |
+| `config.py` | `APISettings`: API-only pydantic-settings from `.env` (`AQMESH_USERNAME`, `AQMESH_PASSWORD`, `AQMESH_ENVIRONMENT`, request defaults) plus `BASE_URLS` |
 | `client.py` | AQMesh API client: bearer-token auth with auto-refresh, pod listing via `/Pods/Assets_V1`, cursor-style data iteration via `/LocationData/Next/…` |
 | `models.py` | Data models and type definitions: `Param` enum (gas/particle), `Asset` (pod metadata), sentinel constants |
+
+### Pipeline package (`src/aqmesh_pipeline/`)
+
+| Module | Responsibility |
+| --- | --- |
+| `config.py` | `Settings(APISettings)` — extends the client's API settings with the data-layout settings (`AQMESH_DATA_ROOT` and the derived `raw_dir`/`clean_dir`/… paths) |
 | `storage.py` | Raw store I/O — reading and writing JSON batches, CSVs, metadata sidecars, and the `state/pointers.json` cursor + `state/assets.json` snapshot |
 | `metadata.py` | Builds the per-CSV metadata sidecar (column units/descriptions, provenance, `reading_status` legend) |
 | `transform.py` | Data cleaning: deduplication by reading number, sentinel → NaN conversion, calibration (`prescaled × slope + offset`) |

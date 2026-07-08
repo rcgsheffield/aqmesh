@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from .models import (
+from aqmesh_client.models import (
     GAS_SENTINELS,
     GAS_SPECIES,
     PARTICLE_CHANNELS,

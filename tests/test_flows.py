@@ -15,11 +15,11 @@ import pytest
 import respx
 import yaml
 
+from aqmesh_client.models import Asset, Param
 from aqmesh_pipeline.flows.clean import clean_data, clean_location_param
 from aqmesh_pipeline.flows.ingest import ingest_raw
 from aqmesh_pipeline.flows.metadata import sync_location_metadata
 from aqmesh_pipeline.flows.pipeline import pipeline
-from aqmesh_pipeline.models import Asset, Param
 from aqmesh_pipeline.storage import (
     assets_path,
     clean_csv_path,
@@ -109,7 +109,7 @@ def test_ingest_raw_continues_when_gas_fails(
 ):
     """A persistent gas (Param=1) 500 must not abort the run; particle still flows (issue #9)."""
     # Skip the client's backoff sleeps so the exhausted-retry path is fast.
-    monkeypatch.setattr("aqmesh_pipeline.client.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("aqmesh_client.client.time.sleep", lambda _seconds: None)
     _allow_prefect()
     respx.post(f"{settings.base_url}/Authenticate").mock(
         return_value=httpx.Response(200, json={"token": "tok"})
@@ -147,7 +147,7 @@ def test_ingest_raw_continues_when_gas_fails(
 @respx.mock
 def test_ingest_raw_marks_hardware_mismatch_unsupported(settings, particle_batch, monkeypatch):
     """A gas 500 on a pod with no gas history is 'unsupported', not 'failed' (issue #64)."""
-    monkeypatch.setattr("aqmesh_pipeline.client.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("aqmesh_client.client.time.sleep", lambda _seconds: None)
     _allow_prefect()
     assets = [
         # Particle-only pod: never recorded a gas reading, but particle flows fine.

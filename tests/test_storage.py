@@ -8,7 +8,7 @@ import json
 import pytest
 import yaml
 
-from aqmesh_pipeline.models import Param
+from aqmesh_client.models import Param
 from aqmesh_pipeline.storage import (
     CorruptRawFileError,
     load_pointers,

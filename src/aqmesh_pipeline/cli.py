@@ -26,14 +26,15 @@ from datetime import UTC, datetime
 import httpx
 from pydantic import ValidationError
 
-from .client import AQMeshAuthError, AQMeshClient
+from aqmesh_client.client import AQMeshAuthError, AQMeshClient
+from aqmesh_client.models import Param
+
 from .config import Settings, get_settings
 from .flows.clean import clean_data
 from .flows.ingest import ingest_raw
 from .flows.metadata import sync_location_metadata
 from .flows.pipeline import pipeline
 from .flows.validate import validate_raw_store
-from .models import Param
 from .storage import write_raw_batch
 
 
