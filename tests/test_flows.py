@@ -147,7 +147,7 @@ def test_ingest_raw_continues_when_gas_fails(
 @respx.mock
 def test_ingest_raw_marks_hardware_mismatch_unsupported(settings, particle_batch, monkeypatch):
     """A gas 500 on a pod with no gas history is 'unsupported', not 'failed' (issue #64)."""
-    monkeypatch.setattr("aqmesh_pipeline.client.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("aqmesh_client.client.time.sleep", lambda _seconds: None)
     _allow_prefect()
     assets = [
         # Particle-only pod: never recorded a gas reading, but particle flows fine.

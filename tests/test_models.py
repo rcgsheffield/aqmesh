@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from aqmesh_pipeline.models import Asset, Param
+from aqmesh_client.models import Asset, Param
 
 
 def test_param_other():
