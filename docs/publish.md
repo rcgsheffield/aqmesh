@@ -114,8 +114,8 @@ The result is the same — only the upload step is manual.
 ## Publishing aqmesh-client to PyPI
 
 The **`aqmesh-client`** package ([`packages/aqmesh-client/`](../packages/aqmesh-client))
-is published to [PyPI](https://pypi.org/project/aqmesh-client/) independently of the
-pipeline, so it can be installed with `pip install aqmesh-client` in other projects.
+is published to PyPI as [`aqmesh`](https://pypi.org/project/aqmesh/) independently of
+the pipeline, so it can be installed with `pip install aqmesh` in other projects.
 It has its own release cadence — see [RELEASING.md](../RELEASING.md) — and its
 GitHub Releases use a `aqmesh-client-vX.Y.Z` tag, distinct from the pipeline's
 `vX.Y.Z` tags.
@@ -123,14 +123,14 @@ GitHub Releases use a `aqmesh-client-vX.Y.Z` tag, distinct from the pipeline's
 Publishing is automated by
 [`publish-to-pypi`](../.github/workflows/publish-to-pypi.yml), which triggers on
 any published GitHub Release whose tag starts with `aqmesh-client-v`, builds the
-package with `uv build --package aqmesh-client`, and uploads it using
+package with `uv build --package aqmesh`, and uploads it using
 [PyPI Trusted Publishing](https://docs.pypi.org/trusted-publishers/) (OIDC) — there
 is no stored PyPI API token.
 
 ### One-time setup
 
 1. **Create the project on PyPI** — either publish a first release manually
-   (`uv build --package aqmesh-client && uv publish`) to reserve the `aqmesh-client`
+   (`uv build --package aqmesh && uv publish`) to reserve the `aqmesh`
    name, or use PyPI's
    [pending publisher](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/)
    flow to create the project from the trusted-publisher form before any release

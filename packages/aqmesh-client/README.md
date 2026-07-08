@@ -8,7 +8,7 @@ other tools that just need to talk to the API.
 ## Installation
 
 ```bash
-pip install aqmesh-client
+pip install aqmesh
 ```
 
 ## Usage

@@ -24,7 +24,7 @@ Selected by `AQMESH_ENVIRONMENT` (see [`config.py`](../../packages/aqmesh-client
 ## What the pipeline uses
 
 The HTTP client lives in [`client.py`](../../packages/aqmesh-client/src/aqmesh_client/client.py) —
-published standalone to PyPI as [`aqmesh-client`](https://pypi.org/project/aqmesh-client/); the
+published standalone to PyPI as [`aqmesh`](https://pypi.org/project/aqmesh/); the
 CLI that exposes these to operators is [`cli.py`](../../src/aqmesh_pipeline/cli.py).
 
 | Endpoint | Method + path | Used by |

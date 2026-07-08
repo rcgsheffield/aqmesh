@@ -1,4 +1,4 @@
-name: Publish aqmesh-client to PyPI
+name: Publish aqmesh to PyPI
 
 on:
   release:
@@ -21,7 +21,7 @@ jobs:
       - uses: astral-sh/setup-uv@v8.2.0
         with:
           enable-cache: true
-      - run: uv build --package aqmesh-client --out-dir dist
+      - run: uv build --package aqmesh --out-dir dist
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist
