@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.3](https://github.com/rcgsheffield/aqmesh/compare/v0.4.2...v0.4.3) (2026-07-08)
+
+
+### Bug Fixes
+
+* **ingest:** downgrade fetch failures on hardware-mismatched pods to WARNING ([#138](https://github.com/rcgsheffield/aqmesh/issues/138)) ([79a3923](https://github.com/rcgsheffield/aqmesh/commit/79a3923eb0011c61c37fa4b71c876cb259779996)), closes [#64](https://github.com/rcgsheffield/aqmesh/issues/64)
+
+
+### Continuous Integration
+
+* pass AQMesh test-API credentials into the pytest job ([#142](https://github.com/rcgsheffield/aqmesh/issues/142)) ([b0dbf72](https://github.com/rcgsheffield/aqmesh/commit/b0dbf727f4b878090b6f8b0793115624e1766385))
+
 ## [0.4.2](https://github.com/rcgsheffield/aqmesh/compare/v0.4.1...v0.4.2) (2026-07-08)
 
 
