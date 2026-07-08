@@ -1,5 +1,5 @@
 [project]
-name = "aqmesh-client"
+name = "aqmesh"
 version = "0.2.0"
 description = "Dependency-light client for the AQMesh REST API."
 readme = "README.md"

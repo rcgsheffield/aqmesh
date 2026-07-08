@@ -25,8 +25,8 @@ The repo is a uv workspace with two independently versioned and published packag
 
 - **`aqmesh-client`** (`packages/aqmesh-client/`, importable as `aqmesh_client`) — a self-contained,
   dependency-light wrapper around the AQMesh REST API (`httpx` + `pydantic`/`pydantic-settings`
-  only; no Prefect, pandas, or pipeline code). Published to PyPI as `aqmesh-client` — `pip install
-  aqmesh-client` gets it standalone for scripts or notebooks that just need to talk to the API.
+  only; no Prefect, pandas, or pipeline code). Published to PyPI as [`aqmesh`](https://pypi.org/project/aqmesh/) —
+  `pip install aqmesh` gets it standalone for scripts or notebooks that just need to talk to the API.
 - **`aqmesh-pipeline`** (repo root, importable as `aqmesh_pipeline`) — the Prefect orchestration,
   storage, cleaning, and CLI that consume the client. It depends on `aqmesh-client` as a normal
   package dependency (resolved from the local workspace member during development, from PyPI when
