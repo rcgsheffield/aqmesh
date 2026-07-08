@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/rcgsheffield/aqmesh/compare/v0.4.3...v0.5.0) (2026-07-08)
+
+
+### Features
+
+* **client:** split aqmesh-client into its own publishable package ([#148](https://github.com/rcgsheffield/aqmesh/issues/148)) ([4ea90f5](https://github.com/rcgsheffield/aqmesh/commit/4ea90f51abef29691c4382df96b4f43aeb14dcfa))
+
 ## [0.4.3](https://github.com/rcgsheffield/aqmesh/compare/v0.4.2...v0.4.3) (2026-07-08)
 
 
