@@ -57,7 +57,7 @@ major. Once the API stabilises we'll release `1.0.0`.
   tags (`aqmesh-client-vX.Y.Z`) and changelog since it bumps independently of the
   pipeline.
 - `aqmesh-client` is published to PyPI on each of its releases via
-  [`.github/workflows/publish-aqmesh-client.yml`](.github/workflows/publish-aqmesh-client.yml),
+  [`.github/workflows/publish-to-pypi.yml`](.github/workflows/publish-to-pypi.yml),
   using [PyPI trusted publishing](https://docs.pypi.org/trusted-publishers/) (OIDC) —
   no stored API token. `aqmesh-pipeline` itself isn't published to PyPI; its releases
   remain version markers + changelog + GitHub Releases for the deployed pipeline.
