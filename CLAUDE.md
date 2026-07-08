@@ -30,7 +30,7 @@ Pre-commit hooks keep `uv.lock` in sync — install once with `pre-commit instal
 
 Three-stage pipeline: **metadata** (fetch location/sensor registry from the API → `data/state/assets.json` + `data/clean/location=<n>/info.json`), **ingest** (download raw readings → `data/raw/`), and **clean** (transform → `data/clean/`). All three run together via the parent `pipeline` flow. Each (location, param) pair in ingest/clean is a separate Prefect task.
 
-The repo is a uv workspace with two independently versioned packages: **`aqmesh-client`** (`packages/aqmesh-client/`, importable as `aqmesh_client` — a dependency-light AQMesh REST client: `client.py`, `models.py`, and `APISettings` in `config.py`; depends only on `httpx`/`pydantic`; published to PyPI standalone) and **`aqmesh-pipeline`** (repo root, importable as `aqmesh_pipeline` — everything else, which depends on `aqmesh-client`). The pipeline's `Settings` subclasses the client's `APISettings` to add the data-layout paths. Import the client from `aqmesh_client`, never from `aqmesh_pipeline`.
+The repo is a uv workspace with two independently versioned packages: **`aqmesh-client`** (`packages/aqmesh-client/`, importable as `aqmesh_client` — a dependency-light AQMesh REST client: `client.py`, `models.py`, and `APISettings` in `config.py`; depends only on `httpx`/`pydantic`; published to PyPI standalone as `aqmesh`) and **`aqmesh-pipeline`** (repo root, importable as `aqmesh_pipeline` — everything else, which depends on `aqmesh-client`). The pipeline's `Settings` subclasses the client's `APISettings` to add the data-layout paths. Import the client from `aqmesh_client`, never from `aqmesh_pipeline`.
 
 Non-obvious invariants:
 - Raw files are **append-only and never modified**. The clean step always rebuilds from scratch.
@@ -42,6 +42,8 @@ Module map, data layout, and infrastructure detail: **docs/architecture.md**. Sc
 ## Testing notes
 
 Tests use Prefect's in-process ephemeral mode (configured in `conftest.py`) — no external Prefect server is needed. HTTP calls to the AQMesh API are mocked with `respx`. The `settings` fixture points at a `tmp_path` data root; use it rather than constructing `Settings` directly.
+
+The ephemeral server occasionally returns a transient `503 Service Unavailable` under CI resource contention (unrelated to the code under test). `pytest-rerunfailures` auto-retries only failures matching that specific error (`--only-rerun` in `pyproject.toml`) — any other test failure still fails outright.
 
 ### CI checks (run automatically on every PR)
 
