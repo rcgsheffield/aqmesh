@@ -43,6 +43,8 @@ Module map, data layout, and infrastructure detail: **docs/architecture.md**. Sc
 
 Tests use Prefect's in-process ephemeral mode (configured in `conftest.py`) — no external Prefect server is needed. HTTP calls to the AQMesh API are mocked with `respx`. The `settings` fixture points at a `tmp_path` data root; use it rather than constructing `Settings` directly.
 
+The ephemeral server occasionally returns a transient `503 Service Unavailable` under CI resource contention (unrelated to the code under test). `pytest-rerunfailures` auto-retries only failures matching that specific error (`--only-rerun` in `pyproject.toml`) — any other test failure still fails outright.
+
 ### CI checks (run automatically on every PR)
 
 - **lock-check** — `uv lock --check` (lockfile in sync)

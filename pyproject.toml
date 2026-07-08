@@ -27,6 +27,7 @@ dev = [
     "ruff>=0.6",
     "pip-audit>=2.7",
     "bandit[toml]>=1.7",
+    "pytest-rerunfailures>=16.4",
 ]
 
 [tool.uv.workspace]
@@ -55,7 +56,9 @@ exclude_dirs = ["tests", ".venv"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q --cov --cov-report=term-missing"
+# --only-rerun scopes reruns to Prefect's in-process ephemeral server flaking under
+# CI resource contention (see issue #144) — any other failure fails outright.
+addopts = "-q --cov --cov-report=term-missing --reruns 2 --reruns-delay 3 --only-rerun \"503 Service Unavailable\""
 
 [tool.coverage.run]
 source = ["aqmesh_pipeline", "aqmesh_client"]
