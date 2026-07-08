@@ -22,6 +22,7 @@ from ..metadata import build_raw_store_descriptor
 from ..storage import (
     load_pointers,
     raw_store_descriptor_path,
+    record_pod_history,
     save_assets,
     save_pointers,
     update_pointer,
@@ -140,6 +141,7 @@ def ingest_raw(settings: Settings | None = None) -> dict:
         client.authenticate()
         assets = client.get_assets()
         # Snapshot the assets so the offline clean stage can read location provenance.
+        record_pod_history(settings, assets, datetime.now(UTC).isoformat())
         save_assets(settings, assets)
         logger.info("Discovered %d locations.", len(assets))
         if not assets:
