@@ -14,7 +14,7 @@ A curated, agent- and human-readable distillation of the [vendor API manual](htt
 
 ## Base URLs
 
-Selected by `AQMESH_ENVIRONMENT` (see [`config.py`](../../src/aqmesh_pipeline/config.py)). Manual § 1.3.
+Selected by `AQMESH_ENVIRONMENT` (see [`config.py`](../../packages/aqmesh-client/src/aqmesh_client/config.py)). Manual § 1.3.
 
 | Environment | Base URL |
 | --- | --- |
@@ -23,8 +23,9 @@ Selected by `AQMESH_ENVIRONMENT` (see [`config.py`](../../src/aqmesh_pipeline/co
 
 ## What the pipeline uses
 
-The HTTP client lives in [`client.py`](../../src/aqmesh_client/client.py); the CLI
-that exposes these to operators is [`cli.py`](../../src/aqmesh_pipeline/cli.py).
+The HTTP client lives in [`client.py`](../../packages/aqmesh-client/src/aqmesh_client/client.py) —
+published standalone to PyPI as [`aqmesh-client`](https://pypi.org/project/aqmesh-client/); the
+CLI that exposes these to operators is [`cli.py`](../../src/aqmesh_pipeline/cli.py).
 
 | Endpoint | Method + path | Used by |
 | --- | --- | --- |

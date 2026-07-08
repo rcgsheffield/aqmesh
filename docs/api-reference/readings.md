@@ -1,7 +1,7 @@
 # Readings: the cursor loop
 
 Manual §§ 4.10, 4.11, 4.12. Implemented in
-[`AQMeshClient.iter_location_data`](../../src/aqmesh_client/client.py) and
+[`AQMeshClient.iter_location_data`](../../packages/aqmesh-client/src/aqmesh_client/client.py) and
 `repeat_last`. Background on why the cursor is the source of truth:
 [`pipeline.md`](../pipeline.md).
 
@@ -34,7 +34,7 @@ Exposed as [`aqmesh repeat`](../../src/aqmesh_pipeline/cli.py).
 
 | Segment | Values | Notes |
 | --- | --- | --- |
-| `Param` | `1` = Gas, `2` = Particles | [`Param`](../../src/aqmesh_client/models.py) enum |
+| `Param` | `1` = Gas, `2` = Particles | [`Param`](../../packages/aqmesh-client/src/aqmesh_client/models.py) enum |
 | `Units` | 1st digit temp: `0` °C, `1` °F · 2nd digit: `0` ppb, `1` µg/m³ | e.g. `01` = °C + µg/m³ (electrolytic sensors only). Default `AQMESH_UNITS=01`. |
 | `TPC` | `0` original, `1` include Total Particle Count | Particles only; count/cm³. Default `AQMESH_TPC=1`. `Next` only. |
 | `Version` | `0` original, `1` include Ethylene Oxide | Omitted from the path when `0`. |
@@ -44,7 +44,7 @@ Exposed as [`aqmesh repeat`](../../src/aqmesh_pipeline/cli.py).
 The server **obscures readings it can't vouch for** by substituting sentinel
 values rather than omitting the field. The cleaning step converts these to
 missing (`NaN`). Defined as `GAS_SENTINELS` / `PARTICLE_SENTINELS` in
-[`models.py`](../../src/aqmesh_client/models.py):
+[`models.py`](../../packages/aqmesh-client/src/aqmesh_client/models.py):
 
 | Param | Sentinels | Meaning |
 | --- | --- | --- |

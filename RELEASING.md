@@ -50,9 +50,17 @@ major. Once the API stabilises we'll release `1.0.0`.
 
 ## Notes
 
-- This project isn't published to PyPI; releases are version markers + changelog +
-  GitHub Releases for the deployed pipeline. If we ever publish to PyPI, add a
-  build-and-publish job gated on the release tag.
+- This repo is a uv workspace with two independently released packages, configured as
+  separate entries in `release-please-config.json`/`.release-please-manifest.json`:
+  the `.` package (`aqmesh-pipeline`, this file's flow above) and
+  `packages/aqmesh-client` (`aqmesh-client`), which gets its own component-prefixed
+  tags (`aqmesh-client-vX.Y.Z`) and changelog since it bumps independently of the
+  pipeline.
+- `aqmesh-client` is published to PyPI on each of its releases via
+  [`.github/workflows/publish-aqmesh-client.yml`](.github/workflows/publish-aqmesh-client.yml),
+  using [PyPI trusted publishing](https://docs.pypi.org/trusted-publishers/) (OIDC) —
+  no stored API token. `aqmesh-pipeline` itself isn't published to PyPI; its releases
+  remain version markers + changelog + GitHub Releases for the deployed pipeline.
 - To force a specific next version, add `Release-As: x.y.z` to a commit body.
 - Configuration lives in `release-please-config.json` and
   `.release-please-manifest.json` at the repo root.

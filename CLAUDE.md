@@ -30,7 +30,7 @@ Pre-commit hooks keep `uv.lock` in sync — install once with `pre-commit instal
 
 Three-stage pipeline: **metadata** (fetch location/sensor registry from the API → `data/state/assets.json` + `data/clean/location=<n>/info.json`), **ingest** (download raw readings → `data/raw/`), and **clean** (transform → `data/clean/`). All three run together via the parent `pipeline` flow. Each (location, param) pair in ingest/clean is a separate Prefect task.
 
-The code is split into two packages in one distribution: **`aqmesh_client`** (`src/aqmesh_client/` — a dependency-light AQMesh REST client: `client.py`, `models.py`, and `APISettings` in `config.py`; depends only on `httpx`/`pydantic`) and **`aqmesh_pipeline`** (everything else, which consumes the client). The pipeline's `Settings` subclasses the client's `APISettings` to add the data-layout paths. Import the client from `aqmesh_client`, never from `aqmesh_pipeline`.
+The repo is a uv workspace with two independently versioned packages: **`aqmesh-client`** (`packages/aqmesh-client/`, importable as `aqmesh_client` — a dependency-light AQMesh REST client: `client.py`, `models.py`, and `APISettings` in `config.py`; depends only on `httpx`/`pydantic`; published to PyPI standalone) and **`aqmesh-pipeline`** (repo root, importable as `aqmesh_pipeline` — everything else, which depends on `aqmesh-client`). The pipeline's `Settings` subclasses the client's `APISettings` to add the data-layout paths. Import the client from `aqmesh_client`, never from `aqmesh_pipeline`.
 
 Non-obvious invariants:
 - Raw files are **append-only and never modified**. The clean step always rebuilds from scratch.

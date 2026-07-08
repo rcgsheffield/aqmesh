@@ -11,7 +11,10 @@ from .client import AQMeshAuthError, AQMeshClient
 from .config import BASE_URLS, APISettings
 from .models import Asset, FailedSensor, Param, SensorDetail, ServerPing
 
+__version__ = "0.1.0"  # x-release-please-version
+
 __all__ = [
+    "__version__",
     "BASE_URLS",
     "APISettings",
     "AQMeshAuthError",
