@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.2](https://github.com/rcgsheffield/aqmesh/compare/v0.4.1...v0.4.2) (2026-07-08)
+
+
+### Bug Fixes
+
+* **ci:** sync uv.lock within release-please's own workflow run ([#140](https://github.com/rcgsheffield/aqmesh/issues/140)) ([79b812d](https://github.com/rcgsheffield/aqmesh/commit/79b812dde8d2a4f518edbd1a2b8d11a8180af6e7)), closes [#139](https://github.com/rcgsheffield/aqmesh/issues/139)
+
+
+### Miscellaneous
+
+* sync uv.lock with aqmesh-pipeline v0.4.1 ([b236b8a](https://github.com/rcgsheffield/aqmesh/commit/b236b8a90d4ba0199989af74d11fdbd3f32c5f43))
+
 ## [0.4.1](https://github.com/rcgsheffield/aqmesh/compare/v0.4.0...v0.4.1) (2026-07-07)
 
 
