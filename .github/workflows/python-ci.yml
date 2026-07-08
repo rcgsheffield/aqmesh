@@ -66,6 +66,10 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.12", "3.13"]
+    env:
+      AQMESH_USERNAME: ${{ secrets.AQMESH_USERNAME }}
+      AQMESH_PASSWORD: ${{ secrets.AQMESH_PASSWORD }}
+      AQMESH_ENVIRONMENT: test
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v8.2.0
