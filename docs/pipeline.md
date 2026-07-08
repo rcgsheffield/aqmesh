@@ -179,7 +179,7 @@ If all retries are exhausted the task fails, but the parent flow continues — o
 preserving the last-known-good position for the next hourly run.
 
 A non-404 fetch failure is reported one of two ways, distinguished by the `Assets_V1`
-lifetime reading counters on the pod's [`Asset`](../src/aqmesh_pipeline/models.py) (issue #64):
+lifetime reading counters on the pod's [`Asset`](../src/aqmesh_client/models.py) (issue #64):
 
 - **`"failed"`** (`ERROR`) — a genuine unexpected error on a pod that otherwise reports this
   param fine (both `last_gas_reading_number` and `last_particle_reading_number` are
