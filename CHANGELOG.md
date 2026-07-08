@@ -1,5 +1,47 @@
 # Changelog
 
+## [0.4.3](https://github.com/rcgsheffield/aqmesh/compare/v0.4.2...v0.4.3) (2026-07-08)
+
+
+### Bug Fixes
+
+* **ingest:** downgrade fetch failures on hardware-mismatched pods to WARNING ([#138](https://github.com/rcgsheffield/aqmesh/issues/138)) ([79a3923](https://github.com/rcgsheffield/aqmesh/commit/79a3923eb0011c61c37fa4b71c876cb259779996)), closes [#64](https://github.com/rcgsheffield/aqmesh/issues/64)
+
+
+### Continuous Integration
+
+* pass AQMesh test-API credentials into the pytest job ([#142](https://github.com/rcgsheffield/aqmesh/issues/142)) ([b0dbf72](https://github.com/rcgsheffield/aqmesh/commit/b0dbf727f4b878090b6f8b0793115624e1766385))
+
+## [0.4.2](https://github.com/rcgsheffield/aqmesh/compare/v0.4.1...v0.4.2) (2026-07-08)
+
+
+### Bug Fixes
+
+* **ci:** sync uv.lock within release-please's own workflow run ([#140](https://github.com/rcgsheffield/aqmesh/issues/140)) ([79b812d](https://github.com/rcgsheffield/aqmesh/commit/79b812dde8d2a4f518edbd1a2b8d11a8180af6e7)), closes [#139](https://github.com/rcgsheffield/aqmesh/issues/139)
+
+
+### Miscellaneous
+
+* sync uv.lock with aqmesh-pipeline v0.4.1 ([b236b8a](https://github.com/rcgsheffield/aqmesh/commit/b236b8a90d4ba0199989af74d11fdbd3f32c5f43))
+
+## [0.4.1](https://github.com/rcgsheffield/aqmesh/compare/v0.4.0...v0.4.1) (2026-07-07)
+
+
+### Bug Fixes
+
+* **client:** correct SensorDetail path from double to single slash ([#130](https://github.com/rcgsheffield/aqmesh/issues/130)) ([cca3419](https://github.com/rcgsheffield/aqmesh/commit/cca341905b209e9f667950a44db429f9944565e3))
+
+
+### Documentation
+
+* **citation:** add Vouriot and Hathway as authors ([1fa2396](https://github.com/rcgsheffield/aqmesh/commit/1fa2396fa217941506d61d5bc8bd75ce75cb9232))
+
+
+### Miscellaneous
+
+* **deps:** bump https://github.com/astral-sh/uv-pre-commit ([#120](https://github.com/rcgsheffield/aqmesh/issues/120)) ([ca2565d](https://github.com/rcgsheffield/aqmesh/commit/ca2565dc50b3753c74c7ec550258ebca1f6dc4ee))
+* sync uv.lock with aqmesh-pipeline v0.4.0 ([0e4683e](https://github.com/rcgsheffield/aqmesh/commit/0e4683e2fa39903b840fce820dc79cb96f93d920))
+
 ## [0.4.0](https://github.com/rcgsheffield/aqmesh/compare/v0.3.0...v0.4.0) (2026-07-03)
 
 

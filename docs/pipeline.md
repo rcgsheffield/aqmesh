@@ -178,6 +178,17 @@ If all retries are exhausted the task fails, but the parent flow continues — o
 (location, param) pairs are unaffected. The pointer for the failed pair is not written,
 preserving the last-known-good position for the next hourly run.
 
+A non-404 fetch failure is reported one of two ways, distinguished by the `Assets_V1`
+lifetime reading counters on the pod's [`Asset`](../src/aqmesh_pipeline/models.py) (issue #64):
+
+- **`"failed"`** (`ERROR`) — a genuine unexpected error on a pod that otherwise reports this
+  param fine (both `last_gas_reading_number` and `last_particle_reading_number` are
+  plausible). Worth investigating.
+- **`"unsupported"`** (`WARNING`, rolled up at `INFO`) — the pod has never recorded a reading
+  for this param at all while the other param has a real counter, indicating a gas-only or
+  particle-only pod hardware variant (manual 4.18) rather than a fault. Expected and
+  permanent; no pointer is written, same as `"failed"`.
+
 ## Summary
 
 | Concern | Mechanism |
@@ -189,3 +200,4 @@ preserving the last-known-good position for the next hourly run.
 | Re-fetch last batch | `aqmesh repeat` — calls `/LocationData/Repeat`; does not advance cursor |
 | Explicit date backfill | No date-range flag; `aqmesh repeat` re-fetches the last batch, older data needs an EI admin cursor reset; Prefect-level historical runs are possible via REST / `run_deployment()` but only after that reset |
 | Partial-failure recovery | Prefect task retries (×3); failed pairs skip pointer write; retried next run |
+| Hardware-mismatch pods | Gas-only/particle-only pods (manual 4.18) log `WARNING`/`status: "unsupported"`, not `ERROR`/`"failed"` |
