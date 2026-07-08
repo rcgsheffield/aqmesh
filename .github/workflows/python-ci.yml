@@ -27,7 +27,6 @@ concurrency:
 jobs:
   lock-check:
     runs-on: ubuntu-24.04
-    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v8.2.0
@@ -37,7 +36,6 @@ jobs:
 
   lint:
     runs-on: ubuntu-24.04
-    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v8.2.0
@@ -49,7 +47,6 @@ jobs:
 
   security:
     runs-on: ubuntu-24.04
-    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v8.2.0
@@ -65,11 +62,14 @@ jobs:
 
   test:
     runs-on: ubuntu-24.04
-    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.12", "3.13"]
+    env:
+      AQMESH_USERNAME: ${{ secrets.AQMESH_USERNAME }}
+      AQMESH_PASSWORD: ${{ secrets.AQMESH_PASSWORD }}
+      AQMESH_ENVIRONMENT: test
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v8.2.0

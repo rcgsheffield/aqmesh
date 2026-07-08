@@ -29,6 +29,16 @@ class Param(IntEnum):
         """Name of the unique per-reading identifier in this param's payload."""
         return "gas_reading_number" if self is Param.GAS else "particle_reading_number"
 
+    @property
+    def other(self) -> Param:
+        """The complementary param (gas <-> particle)."""
+        return Param.PARTICLE if self is Param.GAS else Param.GAS
+
+    @property
+    def reading_count_field(self) -> str:
+        """Name of this param's server-side lifetime counter on the Asset."""
+        return "last_gas_reading_number" if self is Param.GAS else "last_particle_reading_number"
+
 
 #: Timestamp field present on every reading payload.
 READING_DATESTAMP_FIELD = "reading_datestamp"
@@ -69,6 +79,20 @@ class Asset(BaseModel):
     last_particle_reading_number: int | None = None
     location_latitude: float | None = None
     location_longitude: float | None = None
+
+    def lacks_param_hardware(self, param: Param) -> bool:
+        """Best-effort guess that this pod's hardware does not carry ``param``.
+
+        AQMesh ships gas-only and particle-only pod variants (manual 4.18); requesting
+        the missing param throws a persistent API error every run (issue #64). Inferred
+        from the Assets_V1 lifetime counters: this pod has never recorded a ``param``
+        reading (counter 0/None) while the *other* param has a real, nonzero counter.
+        Requiring the other counter to be truthy avoids misclassifying a fully dead or
+        deregistered pod (both counters 0/None, e.g. issue #65) as a hardware mismatch.
+        """
+        this_count = getattr(self, param.reading_count_field)
+        other_count = getattr(self, param.other.reading_count_field)
+        return not this_count and bool(other_count)
 
 
 class ServerPing(BaseModel):

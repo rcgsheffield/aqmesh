@@ -145,6 +145,48 @@ def test_ingest_raw_continues_when_gas_fails(
 
 
 @respx.mock
+def test_ingest_raw_marks_hardware_mismatch_unsupported(settings, particle_batch, monkeypatch):
+    """A gas 500 on a pod with no gas history is 'unsupported', not 'failed' (issue #64)."""
+    monkeypatch.setattr("aqmesh_pipeline.client.time.sleep", lambda _seconds: None)
+    _allow_prefect()
+    assets = [
+        # Particle-only pod: never recorded a gas reading, but particle flows fine.
+        {
+            "location_number": 4971,
+            "last_gas_reading_number": 0,
+            "last_particle_reading_number": 740546364,
+        },
+        # Genuine dual-param pod: both counters nonzero, so its gas 500 is a real failure.
+        {
+            "location_number": 510,
+            "last_gas_reading_number": 3200000,
+            "last_particle_reading_number": 15000000,
+        },
+    ]
+    respx.post(f"{settings.base_url}/Authenticate").mock(
+        return_value=httpx.Response(200, json={"token": "tok"})
+    )
+    respx.get(f"{settings.base_url}/Pods/Assets_V1").mock(
+        return_value=httpx.Response(200, json=assets)
+    )
+    for asset in assets:
+        loc = asset["location_number"]
+        gas_url = f"{settings.base_url}/LocationData/Next/{loc}/{int(Param.GAS)}/01/1"
+        particle_url = f"{settings.base_url}/LocationData/Next/{loc}/{int(Param.PARTICLE)}/01/1"
+        respx.get(gas_url).mock(return_value=httpx.Response(500))
+        respx.get(particle_url).mock(
+            side_effect=[httpx.Response(200, json=particle_batch), httpx.Response(204)]
+        )
+
+    summary = ingest_raw(settings)
+
+    by_loc = {(s["location_number"], s["param"]): s["status"] for s in summary["summaries"]}
+    assert by_loc[(4971, "gas")] == "unsupported"
+    assert by_loc[(510, "gas")] == "failed"
+    assert by_loc[(4971, "particle")] == "ok"
+
+
+@respx.mock
 def test_ingest_raw_skips_404_locations(
     settings, assets_payload, gas_batch, particle_batch, monkeypatch
 ):

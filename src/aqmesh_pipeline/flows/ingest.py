@@ -17,7 +17,7 @@ from prefect.cache_policies import NO_CACHE
 from ..client import AQMeshClient, http_error_body
 from ..config import Settings, get_settings
 from ..metadata import build_raw_store_descriptor
-from ..models import READING_DATESTAMP_FIELD, Param
+from ..models import READING_DATESTAMP_FIELD, Asset, Param
 from ..storage import (
     load_pointers,
     raw_store_descriptor_path,
@@ -33,12 +33,13 @@ from ..storage import (
 def ingest_location_param(
     client: AQMeshClient,
     settings: Settings,
-    location_number: int,
+    asset: Asset,
     param: Param,
     pulled_at: str,
 ) -> dict:
     """Download and persist every unread reading for one location/param."""
     logger = get_run_logger()
+    location_number = asset.location_number
     max_reading_number: int | None = None
     last_datestamp: str | None = None
     total = 0
@@ -73,6 +74,28 @@ def ingest_location_param(
                 "last_reading_number": max_reading_number,
                 "last_datestamp": last_datestamp,
                 "status": "not_found",
+            }
+        # A gas-only / particle-only pod (manual 4.18) returns a persistent 500 for
+        # the param its hardware doesn't carry, every run (issue #64). Detect that
+        # from the Assets_V1 lifetime counters and downgrade to WARNING + a distinct
+        # "unsupported" status, so genuine unexpected failures stay ERROR/"failed".
+        if asset.lacks_param_hardware(param):
+            logger.warning(
+                "Location %s %s: fetch failed and this pod has never recorded a "
+                "%s reading (likely %s-incapable hardware) -- marking unsupported.",
+                location_number,
+                param.label,
+                param.label,
+                param.label,
+            )
+            return {
+                "location_number": location_number,
+                "param": param.label,
+                "new_readings": total,
+                "last_reading_number": max_reading_number,
+                "last_datestamp": last_datestamp,
+                "status": "unsupported",
+                "error": str(exc),
             }
         # The vendor API returns a persistent 500 for some params (issue #9). The
         # client has already exhausted its retries, so isolate this param's failure
@@ -129,9 +152,7 @@ def ingest_raw(settings: Settings | None = None) -> dict:
             logger.warning("No locations returned by the API — check environment/credentials.")
         for asset in assets:
             for param in list(Param):
-                summary = ingest_location_param(
-                    client, settings, asset.location_number, param, pulled_at
-                )
+                summary = ingest_location_param(client, settings, asset, param, pulled_at)
                 summaries.append(summary)
                 # Only advance the pointer on success, so a failed poll preserves the
                 # last known-good progress rather than clobbering it.
@@ -162,11 +183,18 @@ def ingest_raw(settings: Settings | None = None) -> dict:
     total_new = sum(s["new_readings"] for s in summaries)
     failed = [s for s in summaries if s["status"] == "failed"]
     not_found = [s for s in summaries if s["status"] == "not_found"]
+    unsupported = [s for s in summaries if s["status"] == "unsupported"]
     if not_found:
         logger.warning(
             "%d location/param(s) not found (HTTP 404): %s",
             len(not_found),
             ", ".join(f"{s['location_number']}/{s['param']}" for s in not_found),
+        )
+    if unsupported:
+        logger.info(
+            "%d location/param(s) unsupported by pod hardware (skipped): %s",
+            len(unsupported),
+            ", ".join(f"{s['location_number']}/{s['param']}" for s in unsupported),
         )
     if failed:
         logger.warning(

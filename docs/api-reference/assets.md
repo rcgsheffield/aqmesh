@@ -28,7 +28,7 @@ The full payload is wide (~40 fields) and varies by firmware, so the model keeps
 | `location_name` | Display only |
 | `serial_number` | Pod serial; display / cross-reference with [sensor details](diagnostics.md) |
 | `firmware_version` | e.g. `v3.22`, `v5.6` — determines frequency model (see [device-management](device-management.md)) |
-| `last_gas_reading_number`, `last_particle_reading_number` | Last reading IDs the server holds for the pod |
+| `last_gas_reading_number`, `last_particle_reading_number` | Last reading IDs the server holds for the pod. Also doubles as a hardware-capability signal: a pod that has never recorded one param (`0`/`None`) while the other has a real counter is a gas-only or particle-only variant (manual 4.18), not a broken pod — see `Asset.lacks_param_hardware` and the `ingest` flow's `"unsupported"` status ([pipeline.md](../pipeline.md#failure-recovery), issue #64) |
 | `location_latitude`, `location_longitude` | Siting (often null on the test fleet) |
 
 Other notable fields in the raw payload include `pod_latitude/longitude`,
