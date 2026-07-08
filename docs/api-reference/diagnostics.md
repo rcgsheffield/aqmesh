@@ -2,7 +2,7 @@
 
 Read-only endpoints that answer "is the server healthy, is the data fresh, and is
 the hardware OK?" — useful context around a pipeline run. Implemented in
-[`client.py`](../../src/aqmesh_client/client.py) and surfaced by the
+[`client.py`](../../packages/aqmesh-client/src/aqmesh_client/client.py) and surfaced by the
 [`ping`](../../src/aqmesh_pipeline/cli.py), `check`, and `sensors` CLI commands.
 
 ## Server ping (4.16)

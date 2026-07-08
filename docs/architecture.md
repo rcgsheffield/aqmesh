@@ -21,15 +21,19 @@ CLI: aqmesh pipeline | ingest | clean | check
 
 ## Packages
 
-The repo ships two importable packages from a single distribution (`src/` layout):
+The repo is a uv workspace with two independently versioned and published packages:
 
-- **`aqmesh_client`** — a self-contained, dependency-light wrapper around the AQMesh REST API
-  (`httpx` + `pydantic`/`pydantic-settings` only; no Prefect, pandas, or pipeline code). Reusable
-  from scripts or notebooks that just need to talk to the API.
-- **`aqmesh_pipeline`** — the Prefect orchestration, storage, cleaning, and CLI that consume the
-  client. The dependency arrow points one way: the pipeline imports the client, never the reverse.
+- **`aqmesh-client`** (`packages/aqmesh-client/`, importable as `aqmesh_client`) — a self-contained,
+  dependency-light wrapper around the AQMesh REST API (`httpx` + `pydantic`/`pydantic-settings`
+  only; no Prefect, pandas, or pipeline code). Published to PyPI as `aqmesh-client` — `pip install
+  aqmesh-client` gets it standalone for scripts or notebooks that just need to talk to the API.
+- **`aqmesh-pipeline`** (repo root, importable as `aqmesh_pipeline`) — the Prefect orchestration,
+  storage, cleaning, and CLI that consume the client. It depends on `aqmesh-client` as a normal
+  package dependency (resolved from the local workspace member during development, from PyPI when
+  installed standalone). The dependency arrow points one way: the pipeline imports the client,
+  never the reverse.
 
-### Client package (`src/aqmesh_client/`)
+### Client package (`packages/aqmesh-client/src/aqmesh_client/`)
 
 | Module | Responsibility |
 | --- | --- |
@@ -37,7 +41,7 @@ The repo ships two importable packages from a single distribution (`src/` layout
 | `client.py` | AQMesh API client: bearer-token auth with auto-refresh, pod listing via `/Pods/Assets_V1`, cursor-style data iteration via `/LocationData/Next/…` |
 | `models.py` | Data models and type definitions: `Param` enum (gas/particle), `Asset` (pod metadata), sentinel constants |
 
-### Pipeline package (`src/aqmesh_pipeline/`)
+### Pipeline package (`src/aqmesh_pipeline/`, repo root)
 
 | Module | Responsibility |
 | --- | --- |

@@ -52,7 +52,10 @@ If you edit dependencies, run `uv lock` to regenerate `uv.lock` and commit it al
   configured in `pyproject.toml`).
 - **Tests:** add or update tests under `tests/` for any behaviour change, and make
   sure `uv run pytest` passes.
-- **Layout:** the package lives under `src/aqmesh_pipeline/`; keep new modules there.
+- **Layout:** this is a uv workspace with two packages — the pipeline lives under
+  `src/aqmesh_pipeline/`, the standalone API client under
+  `packages/aqmesh-client/src/aqmesh_client/`. Keep new modules in the package they
+  belong to; only the client may be imported by the pipeline, never the reverse.
 
 ## Submitting changes
 

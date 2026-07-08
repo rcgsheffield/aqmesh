@@ -6,7 +6,8 @@ name: Release to ORDA
 #
 # This job is gated on the FIGSHARE_ARTICLE_ID repository variable, so it stays
 # dormant (and never fails) until that variable and the FIGSHARE_TOKEN secret are
-# configured in the repo settings.
+# configured in the repo settings. It also skips aqmesh-client-vX.Y.Z releases —
+# the ORDA item is for the pipeline, not the standalone client library.
 
 on:
   release:
@@ -22,7 +23,7 @@ permissions:
 
 jobs:
   upload:
-    if: vars.FIGSHARE_ARTICLE_ID != ''
+    if: vars.FIGSHARE_ARTICLE_ID != '' && !startsWith(github.event.release.tag_name || inputs.tag_name, 'aqmesh-client-v')
     runs-on: ubuntu-24.04
     env:
       TAG: ${{ github.event.release.tag_name || inputs.tag_name }}

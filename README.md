@@ -31,6 +31,23 @@ graph LR
 | **[docs/](docs/README.md)** | Operator index — deployment, service management, troubleshooting |
 | **[docs/architecture.md](docs/architecture.md)** | System internals — modules, infrastructure, data layout |
 
+## Installation
+
+This repo is a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/) with two
+independently published packages (see [docs/architecture.md](docs/architecture.md#packages)):
+
+- **[`aqmesh-client`](https://pypi.org/project/aqmesh-client/)** — a dependency-light client for
+  the AQMesh REST API (`httpx` + `pydantic` only). Install standalone if you just need to talk to
+  the API from another script, tool, or notebook:
+
+  ```bash
+  pip install aqmesh-client
+  ```
+
+- **`aqmesh-pipeline`** (this repo's root package) — the full Prefect orchestration, storage,
+  cleaning, and CLI. Not published to PyPI; see [Development](#development) below to run it from
+  a checkout.
+
 ## Development
 
 See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full guide to setting up your environment,

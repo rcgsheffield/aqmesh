@@ -1,8 +1,8 @@
 # Assets — the pod/location inventory
 
 Manual § 4.19. Implemented in
-[`AQMeshClient.get_assets`](../../src/aqmesh_client/client.py); modelled by
-[`Asset`](../../src/aqmesh_client/models.py).
+[`AQMeshClient.get_assets`](../../packages/aqmesh-client/src/aqmesh_client/client.py); modelled by
+[`Asset`](../../packages/aqmesh-client/src/aqmesh_client/models.py).
 
 ```
 GET /Pods/Assets_V1

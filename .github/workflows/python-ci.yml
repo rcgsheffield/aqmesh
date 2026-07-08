@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "src/**"
+      - "packages/**"
       - "tests/**"
       - "pyproject.toml"
       - "uv.lock"
@@ -12,6 +13,7 @@ on:
   pull_request:
     paths:
       - "src/**"
+      - "packages/**"
       - "tests/**"
       - "pyproject.toml"
       - "uv.lock"
@@ -56,9 +58,9 @@ jobs:
       - name: pip-audit (dependency vulnerabilities)
         run: uv run pip-audit
       - name: Bandit (warn on medium severity)
-        run: uv run bandit -c pyproject.toml -r src -ll --exit-zero
+        run: uv run bandit -c pyproject.toml -r src packages -ll --exit-zero
       - name: Bandit (fail on high severity)
-        run: uv run bandit -c pyproject.toml -r src -lll
+        run: uv run bandit -c pyproject.toml -r src packages -lll
 
   test:
     runs-on: ubuntu-24.04
