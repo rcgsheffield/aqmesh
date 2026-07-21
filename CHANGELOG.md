@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.6.0](https://github.com/rcgsheffield/aqmesh/compare/v0.5.1...v0.6.0) (2026-07-21)
+
+
+### Features
+
+* **client:** add a standalone CLI to aqmesh_client ([#163](https://github.com/rcgsheffield/aqmesh/issues/163)) ([4afb04f](https://github.com/rcgsheffield/aqmesh/commit/4afb04f3e21889fbf272bf35e09acadb4d772318)), closes [#136](https://github.com/rcgsheffield/aqmesh/issues/136)
+
+
+### Miscellaneous
+
+* **deps:** bump https://github.com/astral-sh/ruff-pre-commit ([#160](https://github.com/rcgsheffield/aqmesh/issues/160)) ([fef868b](https://github.com/rcgsheffield/aqmesh/commit/fef868bac50ca2fdcd497aecbc0f084213f35dec))
+* **deps:** bump https://github.com/astral-sh/uv-pre-commit ([#161](https://github.com/rcgsheffield/aqmesh/issues/161)) ([dd00266](https://github.com/rcgsheffield/aqmesh/commit/dd00266e1feb1990dca4cd1dd0879bdae762749b))
+
 ## [0.5.1](https://github.com/rcgsheffield/aqmesh/compare/v0.5.0...v0.5.1) (2026-07-08)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/rcgsheffield/aqmesh/compare/aqmesh-client-v0.2.1...aqmesh-client-v0.3.0) (2026-07-21)
+
+
+### Features
+
+* **client:** add a standalone CLI to aqmesh_client ([#163](https://github.com/rcgsheffield/aqmesh/issues/163)) ([4afb04f](https://github.com/rcgsheffield/aqmesh/commit/4afb04f3e21889fbf272bf35e09acadb4d772318)), closes [#136](https://github.com/rcgsheffield/aqmesh/issues/136)
+
 ## [0.2.1](https://github.com/rcgsheffield/aqmesh/compare/aqmesh-client-v0.2.0...aqmesh-client-v0.2.1) (2026-07-08)
 
 
