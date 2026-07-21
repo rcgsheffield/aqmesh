@@ -144,6 +144,11 @@ def build_metadata(
         first = cleaned_df["location_number"].dropna()
         location_number = int(first.iloc[0]) if not first.empty else None
 
+    pod_serial_numbers = sorted(
+        int(v)
+        for v in cleaned_df.get("pod_serial_number", pd.Series(dtype="Int64")).dropna().unique()
+    )
+
     return {
         "dataset": "AQMesh cleaned readings",
         "param": param.label,
@@ -154,6 +159,8 @@ def build_metadata(
             "latitude": asset.location_latitude if asset else None,
             "longitude": asset.location_longitude if asset else None,
             "pod_serial_number": asset.serial_number if asset else None,
+            "pod_serial_numbers": pod_serial_numbers or None,
+            "multi_pod": len(pod_serial_numbers) > 1,
             "firmware_version": asset.firmware_version if asset else None,
             "environment": settings.environment,
             "source": "AQMesh API",

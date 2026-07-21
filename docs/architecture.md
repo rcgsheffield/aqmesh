@@ -46,7 +46,7 @@ The repo is a uv workspace with two independently versioned and published packag
 | Module | Responsibility |
 | --- | --- |
 | `config.py` | `Settings(APISettings)` — extends the client's API settings with the data-layout settings (`AQMESH_DATA_ROOT` and the derived `raw_dir`/`clean_dir`/… paths) |
-| `storage.py` | Raw store I/O — reading and writing JSON batches, CSVs, metadata sidecars, and the `state/pointers.json` cursor + `state/assets.json` snapshot |
+| `storage.py` | Raw store I/O — reading and writing JSON batches, CSVs, metadata sidecars, and the `state/pointers.json` cursor + `state/assets.json` snapshot + `state/pod_history.json` audit trail |
 | `metadata.py` | Builds the per-CSV metadata sidecar (column units/descriptions, provenance, `reading_status` legend) |
 | `transform.py` | Data cleaning: deduplication by reading number, sentinel → NaN conversion, calibration (`prescaled × slope + offset`) |
 | `flows/ingest.py` | Prefect flow: authenticates, lists pods, downloads per-location/param data, writes to raw store |
@@ -90,6 +90,7 @@ resampled/
 state/
   pointers.json                     # cursor per location/param pair — safe to restart mid-run
   assets.json                       # asset snapshot from ingest; read by the offline clean stage
+  pod_history.json                  # append-only log of which pod served each location, and when
 ```
 
 Each clean CSV is paired with a `.metadata.json` sidecar (issue #58) documenting each column

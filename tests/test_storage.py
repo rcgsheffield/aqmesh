@@ -8,13 +8,15 @@ import json
 import pytest
 import yaml
 
-from aqmesh_client.models import Param
+from aqmesh_client.models import Asset, Param
 from aqmesh_pipeline.storage import (
     CorruptRawFileError,
     load_pointers,
+    pod_history_path,
     raw_param_dir,
     raw_store_descriptor_path,
     read_raw_readings,
+    record_pod_history,
     save_pointers,
     update_pointer,
     write_location_info,
@@ -60,6 +62,83 @@ def test_read_without_reading_number_skips_dedup(settings):
     df = read_raw_readings(settings, 510, Param.GAS)
     assert len(df) == 2
     assert "gas_reading_number" not in df.columns
+
+
+def test_read_raw_readings_dedup_scoped_by_pod(settings, gas_batch):
+    # A pod swap could reuse the same reading number the old pod already used;
+    # both readings are genuinely distinct and must both survive.
+    swapped = [{**gas_batch[0], "pod_serial_number": 9999999}]
+    write_raw_batch(settings, 510, Param.GAS, gas_batch, pulled_at="20260101T000000Z", seq=0)
+    write_raw_batch(settings, 510, Param.GAS, swapped, pulled_at="20260101T010000Z", seq=0)
+
+    df = read_raw_readings(settings, 510, Param.GAS)
+    assert len(df) == 3
+    assert set(df["pod_serial_number"]) == {2410149, 9999999}
+
+
+def test_read_raw_readings_dedup_without_pod_column(settings):
+    # No pod_serial_number column at all -> fall back to dedup on reading number alone.
+    records = [
+        {"gas_reading_number": 1, "co_prescaled": 1.0},
+        {"gas_reading_number": 1, "co_prescaled": 2.0},
+    ]
+    write_raw_batch(settings, 510, Param.GAS, records, pulled_at="20260101T000000Z", seq=0)
+    df = read_raw_readings(settings, 510, Param.GAS)
+    assert len(df) == 1
+    assert df.iloc[0]["co_prescaled"] == 2.0  # last occurrence wins
+
+
+def test_record_pod_history_first_run_creates_entry(settings):
+    asset = Asset(location_number=510, serial_number=2410149)
+    record_pod_history(settings, [asset], "2026-01-01T00:00:00Z")
+
+    history = json.loads(pod_history_path(settings).read_text())
+    assert history == [
+        {
+            "location_number": 510,
+            "serial_number": 2410149,
+            "first_seen": "2026-01-01T00:00:00Z",
+            "last_seen": "2026-01-01T00:00:00Z",
+        }
+    ]
+
+
+def test_record_pod_history_appends_on_serial_change(settings):
+    record_pod_history(
+        settings, [Asset(location_number=510, serial_number=2410149)], "2026-01-01T00:00:00Z"
+    )
+    record_pod_history(
+        settings, [Asset(location_number=510, serial_number=9999999)], "2026-02-01T00:00:00Z"
+    )
+
+    history = json.loads(pod_history_path(settings).read_text())
+    assert [h["serial_number"] for h in history] == [2410149, 9999999]
+
+
+def test_record_pod_history_touches_last_seen_when_unchanged(settings):
+    record_pod_history(
+        settings, [Asset(location_number=510, serial_number=2410149)], "2026-01-01T00:00:00Z"
+    )
+    record_pod_history(
+        settings, [Asset(location_number=510, serial_number=2410149)], "2026-02-01T00:00:00Z"
+    )
+
+    history = json.loads(pod_history_path(settings).read_text())
+    assert len(history) == 1
+    assert history[0]["first_seen"] == "2026-01-01T00:00:00Z"
+    assert history[0]["last_seen"] == "2026-02-01T00:00:00Z"
+
+
+def test_record_pod_history_is_best_effort_on_corrupt_file(settings):
+    path = pod_history_path(settings)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("{not valid json", encoding="utf-8")
+
+    # Must not raise; corrupt history is an audit-trail concern, not fatal.
+    record_pod_history(
+        settings, [Asset(location_number=510, serial_number=2410149)], "2026-01-01T00:00:00Z"
+    )
+    assert path.read_text() == "{not valid json"
 
 
 def test_write_location_info_round_trip(settings):
