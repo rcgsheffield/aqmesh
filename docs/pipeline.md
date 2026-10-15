@@ -69,6 +69,17 @@ Raw batch files (`raw/location=<n>/param=<gas|particle>/<pulled_at>_<seq>.json`)
 tmp → rename pattern, plus a `.sha256` integrity sidecar verified on read — see
 [Raw file integrity in architecture.md](architecture.md#design-decisions) for detail.
 
+### `state/pod_history.json` (pod-assignment audit trail)
+
+AQMesh treats "location" (`location_number`) and "pod" (`serial_number`) as separate identities,
+so a physical pod can be swapped out at a site while its location number stays the same. Every
+`aqmesh ingest`/`aqmesh metadata` run appends to `state/pod_history.json` — one entry per
+`(location_number, serial_number)` pair ever seen, with `first_seen`/`last_seen` timestamps —
+so a swap leaves a permanent record instead of being silently overwritten by the next
+`assets.json` snapshot. Like `pointers.json`, this is **not** part of the resume/cursor
+mechanism: it is a best-effort audit trail, and a missing or corrupt file never blocks ingest
+or clean (failures are logged and swallowed).
+
 ## Automatic gap fill
 
 If the pipeline is down for several hours, or a run fails partway through, the API cursor for
@@ -196,6 +207,7 @@ lifetime reading counters on the pod's [`Asset`](../packages/aqmesh-client/src/a
 | When to run | Prefect cron schedule `6 * * * *`, deployment `aqmesh-pipeline/hourly` |
 | What to fetch next | AQMesh server-side cursor per (location, param) via `/LocationData/Next` |
 | Local progress record | `state/pointers.json` — audit trail and failure bookmark |
+| Pod-swap history | `state/pod_history.json` — append-only, best-effort audit trail of which pod served each location |
 | Automatic gap fill | Yes — server cursor accumulates missed batches; next run drains them |
 | Re-fetch last batch | `aqmesh repeat` — calls `/LocationData/Repeat`; does not advance cursor |
 | Explicit date backfill | No date-range flag; `aqmesh repeat` re-fetches the last batch, older data needs an EI admin cursor reset; Prefect-level historical runs are possible via REST / `run_deployment()` but only after that reset |

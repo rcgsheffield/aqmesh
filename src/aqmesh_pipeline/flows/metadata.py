@@ -8,13 +8,14 @@ readings and would otherwise be invisible to the clean step.
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import UTC, datetime
 
 from prefect import flow, get_run_logger
 
 from aqmesh_client.client import AQMeshClient
 
 from ..config import Settings, get_settings
-from ..storage import save_assets, write_location_info
+from ..storage import record_pod_history, save_assets, write_location_info
 
 
 @flow(name="aqmesh-sync-metadata")
@@ -48,6 +49,7 @@ def sync_location_metadata(settings: Settings | None = None) -> list[dict]:
         record["sensors"] = sensors_by_pod.get(asset.serial_number, [])
         records.append(record)
 
+    record_pod_history(settings, assets, datetime.now(UTC).isoformat())
     save_assets(settings, assets)
 
     for record in records:

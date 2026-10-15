@@ -8,11 +8,14 @@ Layout under ``AQMESH_DATA_ROOT``::
            location=<n>/aqmesh_<n>_<param>.metadata.json                # sidecar data dictionary
     state/ pointers.json                                               # per-location/param progress
            assets.json                                                 # asset snapshot for clean
+           pod_history.json                                            # pod<->location history log
 
 Raw files are append-only: every pull writes new files and nothing is ever
 mutated. Cleaning reads *all* raw files for a location, ordered by pull time, and
-dedupes by the reading number keeping the last occurrence -- so rebased values
-(re-sent later with corrected numbers, manual 4.12) overwrite the originals.
+dedupes by (pod serial number, reading number) keeping the last occurrence -- so
+rebased values (re-sent later with corrected numbers, manual 4.12) overwrite the
+originals, while a pod swap at the same location can't collide reading numbers
+across pods and silently drop a genuinely distinct reading.
 """
 
 from __future__ import annotations
@@ -38,6 +41,7 @@ class CorruptRawFileError(RuntimeError):
 
 POINTERS_FILENAME = "pointers.json"
 ASSETS_FILENAME = "assets.json"
+POD_HISTORY_FILENAME = "pod_history.json"
 
 
 # -- data-root docs ------------------------------------------------------
@@ -104,6 +108,10 @@ def assets_path(settings: Settings) -> Path:
     return settings.state_dir / ASSETS_FILENAME
 
 
+def pod_history_path(settings: Settings) -> Path:
+    return settings.state_dir / POD_HISTORY_FILENAME
+
+
 # -- raw store -----------------------------------------------------------
 def write_raw_batch(
     settings: Settings,
@@ -135,8 +143,10 @@ def read_raw_readings(settings: Settings, location_number: int, param: Param) ->
     """Load and concatenate every raw reading for a location/param, deduped.
 
     Files are read in filename order (``<pulled_at>_<seq>``), which is
-    chronological, so keeping the last occurrence of each reading number lets
-    corrected (rebased) values win.
+    chronological, so keeping the last occurrence of each (pod serial number,
+    reading number) pair lets corrected (rebased) values win, while still
+    treating reading numbers from different pods (e.g. after a pod swap at
+    this location) as distinct even if they happen to collide numerically.
     """
     out_dir = raw_param_dir(settings, location_number, param)
     files = sorted(out_dir.glob("*.json"))
@@ -163,7 +173,9 @@ def read_raw_readings(settings: Settings, location_number: int, param: Param) ->
     df = pd.DataFrame(records)
     key = param.reading_number_field
     if key in df.columns:
-        df = df.drop_duplicates(subset=key, keep="last").reset_index(drop=True)
+        pod_col = "pod_serial_number"
+        subset = [pod_col, key] if pod_col in df.columns else [key]
+        df = df.drop_duplicates(subset=subset, keep="last").reset_index(drop=True)
     return df
 
 
@@ -255,6 +267,42 @@ def load_assets(settings: Settings) -> dict[int, Asset]:
         return {}
     records = json.loads(path.read_text(encoding="utf-8"))
     return {a.location_number: a for a in (Asset(**r) for r in records)}
+
+
+# -- state / pod history --------------------------------------------------
+def record_pod_history(settings: Settings, assets: list[Asset], seen_at: str) -> None:
+    """Append/touch ``pod_history.json`` with the pod currently installed at each location.
+
+    Each (location, serial number) pair seen before has its ``last_seen``
+    bumped; a serial number not previously recorded for that location becomes
+    a new history entry, capturing a pod swap. This is a best-effort audit
+    trail, not part of the pipeline's resume/cursor mechanism, so failures are
+    logged and swallowed rather than raised.
+    """
+    try:
+        path = pod_history_path(settings)
+        history: list[dict] = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+        by_key = {(h["location_number"], h["serial_number"]): h for h in history}
+        for asset in assets:
+            if asset.serial_number is None:
+                continue
+            key = (asset.location_number, asset.serial_number)
+            if key in by_key:
+                by_key[key]["last_seen"] = seen_at
+            else:
+                by_key[key] = {
+                    "location_number": asset.location_number,
+                    "serial_number": asset.serial_number,
+                    "first_seen": seen_at,
+                    "last_seen": seen_at,
+                }
+        history = sorted(by_key.values(), key=lambda h: (h["location_number"], h["first_seen"]))
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(history, indent=2), encoding="utf-8")
+        tmp.replace(path)
+    except Exception:
+        logger.warning("Failed to update pod history; continuing.", exc_info=True)
 
 
 def update_pointer(

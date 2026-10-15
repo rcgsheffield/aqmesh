@@ -65,6 +65,8 @@ def test_build_metadata_provenance_from_asset(settings, gas_batch):
     assert prov["firmware_version"] == "v3.22"
     assert prov["environment"] == "test"
     assert prov["generated_at"] == "2026-06-19T09:30:00+00:00"
+    assert prov["pod_serial_numbers"] == [2410149]
+    assert prov["multi_pod"] is False
     assert meta["location_number"] == 510
     assert meta["row_count"] == len(cleaned)
     assert meta["reading_status_legend"] == READING_STATUS_LEGEND
@@ -79,6 +81,19 @@ def test_build_metadata_without_asset_degrades_gracefully(settings, gas_batch):
     assert meta["provenance"]["location_name"] is None
     # location_number still recovered from the cleaned frame.
     assert meta["location_number"] == 510
+    # pod_serial_numbers still derives from the frame even without an asset snapshot.
+    assert meta["provenance"]["pod_serial_numbers"] == [2410149]
+
+
+def test_build_metadata_flags_multi_pod_span(settings, gas_batch):
+    swapped = [{**gas_batch[0], "pod_serial_number": 9999999}]
+    raw = pd.DataFrame(gas_batch + swapped)
+    cleaned = clean_readings(raw, Param.GAS)
+
+    meta = build_metadata(cleaned, raw, Param.GAS, None, settings, _GENERATED_AT)
+
+    assert meta["provenance"]["pod_serial_numbers"] == [2410149, 9999999]
+    assert meta["provenance"]["multi_pod"] is True
 
 
 def test_build_metadata_particle_static_units(settings, particle_batch):
